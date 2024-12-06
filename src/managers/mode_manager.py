@@ -97,7 +97,7 @@ class ModeManager:
         self.current_status = None
         self.previous_status = None
         self.pause_stop_timer = None
-        self.pause_stop_delay = 2  # Delay in seconds before switching to clock mode
+        self.pause_stop_delay = 0.5  # Delay in seconds before switching to clock mode
 
     # Add setter methods for the managers
 

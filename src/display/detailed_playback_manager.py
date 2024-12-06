@@ -122,7 +122,7 @@ class DetailedPlaybackManager(BaseManager):
         total_duration = f"{total_minutes}:{total_seconds:02d}"
 
         # Log progress bar data
-        self.logger.error(
+        self.logger.debug(
             f"DetailedPlaybackManager: Progress bar data: seek={seek:.2f}s, duration={duration}s, progress={progress:.2%}"
         )
 
@@ -131,7 +131,7 @@ class DetailedPlaybackManager(BaseManager):
         margin = 5
         max_text_width = screen_width - 2 * margin  # Full width for centering
 
-        # **Calculate Progress Bar Dimensions and Position** (move this earlier)
+        # **Calculate Progress Bar Dimensions and Position**
         progress_width = int(screen_width * 0.7)  # 70% of screen width
         progress_x = (screen_width - progress_width) // 2
         progress_y = margin + 50  # Updated fixed position for progress bar to avoid using `positions` later
@@ -148,32 +148,20 @@ class DetailedPlaybackManager(BaseManager):
         artist_display, self.scroll_offset_artist, artist_scrolling = self.update_scroll(
             artist_name, self.font_artist, max_text_width, self.scroll_offset_artist
         )
-        artist_x = positions["artist"]["x"]
+        artist_x = (screen_width // 2) - self.scroll_offset_artist if artist_scrolling else (screen_width - self.font_artist.getsize(artist_display)[0]) // 2
         artist_y = positions["artist"]["y"]
 
-        if artist_scrolling:
-            draw.text((artist_x - self.scroll_offset_artist, artist_y), artist_display, font=self.font_artist, fill="white")
-            draw.text((artist_x - self.scroll_offset_artist + self.font_artist.getsize(artist_display)[0] + 20, artist_y), artist_display, font=self.font_artist, fill="white")
-        else:
-            artist_width, artist_height = self.font_artist.getsize(artist_display)
-            artist_x = (screen_width - artist_width) // 2
-            draw.text((artist_x, artist_y), artist_display, font=self.font_artist, fill="white")
+        draw.text((artist_x, artist_y), artist_display, font=self.font_artist, fill="white")
         self.logger.debug(f"DetailedPlaybackManager: Artist displayed at position ({artist_x}, {artist_y}).")
 
         # **C. Draw Song Title with Continuous Scrolling**
         title_display, self.scroll_offset_title, title_scrolling = self.update_scroll(
             song_title, self.font_title, max_text_width, self.scroll_offset_title
         )
-        title_x = positions["title"]["x"]
+        title_x = (screen_width // 2) - self.scroll_offset_title if title_scrolling else (screen_width - self.font_title.getsize(title_display)[0]) // 2
         title_y = positions["title"]["y"]
 
-        if title_scrolling:
-            draw.text((title_x - self.scroll_offset_title, title_y), title_display, font=self.font_title, fill="white")
-            draw.text((title_x - self.scroll_offset_title + self.font_title.getsize(title_display)[0] + 20, title_y), title_display, font=self.font_title, fill="white")
-        else:
-            title_width, title_height = self.font_title.getsize(title_display)
-            title_x = (screen_width - title_width) // 2
-            draw.text((title_x, title_y), title_display, font=self.font_title, fill="white")
+        draw.text((title_x, title_y), title_display, font=self.font_title, fill="white")
         self.logger.debug(f"DetailedPlaybackManager: Title displayed at position ({title_x}, {title_y}).")
 
         # **D. Draw Sample Rate and Bit Depth**
