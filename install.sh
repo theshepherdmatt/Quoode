@@ -26,16 +26,31 @@ rm -f "$LOG_FILE"
 #   ASCII Art Banner Function
 # ============================
 banner() {
-    echo -e "${MAGENTA}"
-    echo "   ________  ___  ___  ________  ________  ___  ________ ___    ___   "
-    echo "  |\   __  \|\  \|\  \|\   __  \|\   ___ \|\  \|\  _____\\  \  /  /|  "
-    echo "  \ \  \|\  \ \  \\\  \ \  \|\  \ \  \_|\ \ \  \ \  \__/\ \  \/  / /  "
-    echo "   \ \  \\\  \ \  \\\  \ \   __  \ \  \ \\ \ \  \ \   __\\ \    / /   "
-    echo "    \ \  \\\  \ \  \\\  \ \  \ \  \ \  \_\\ \ \  \ \  \_| \/  /  /    "
-    echo "     \ \_____  \ \_______\ \__\ \__\ \_______\ \__\ \__\__/  / /      "
-    echo "      \|___| \__\|_______|\|__|\|__|\|_______|\|__|\|__|\___/ /       "
-    echo "            \|__|                                      \|___|/        "
-    echo -e "${NC}"
+    echo -e "\033[0;35m"
+    echo "                                                                                                                                 "
+    echo "                                                                  dddddddd                                                       "
+    echo "     QQQQQQQQQ                                                    d::::::d  iiii     ffffffffffffffff                            "
+    echo "   QQ:::::::::QQ                                                  d::::::d i::::i   f::::::::::::::::f                           "
+    echo " QQ:::::::::::::QQ                                                d::::::d  iiii   f::::::::::::::::::f                          "
+    echo "Q:::::::QQQ:::::::Q                                               d:::::d          f::::::fffffff:::::f                          "
+    echo "Q::::::O   Q::::::Quuuuuu    uuuuuu    aaaaaaaaaaaaa      ddddddddd:::::d iiiiiii  f:::::f       ffffffyyyyyyy           yyyyyyy"
+    echo "Q:::::O     Q:::::Qu::::u    u::::u    a::::::::::::a   dd::::::::::::::d i:::::i  f:::::f              y:::::y         y:::::y "
+    echo "Q:::::O     Q:::::Qu::::u    u::::u    aaaaaaaaa:::::a d::::::::::::::::d  i::::i f:::::::ffffff         y:::::y       y:::::y  "
+    echo "Q:::::O     Q:::::Qu::::u    u::::u             a::::ad:::::::ddddd:::::d  i::::i f::::::::::::f          y:::::y     y:::::y   "
+    echo "Q:::::O     Q:::::Qu::::u    u::::u      aaaaaaa:::::ad::::::d    d:::::d  i::::i f::::::::::::f           y:::::y   y:::::y    "
+    echo "Q:::::O     Q:::::Qu::::u    u::::u    aa::::::::::::ad:::::d     d:::::d  i::::i f:::::::ffffff            y:::::y y:::::y     "
+    echo "Q:::::O  QQQQ:::::Qu::::u    u::::u   a::::aaaa::::::ad:::::d     d:::::d  i::::i  f:::::f                   y:::::y:::::y      "
+    echo "Q::::::O Q::::::::Qu:::::uuuu:::::u  a::::a    a:::::ad:::::d     d:::::d  i::::i  f:::::f                    y:::::::::y       "
+    echo "Q:::::::QQ::::::::Qu:::::::::::::::uua::::a    a:::::ad::::::ddddd::::::ddi::::::if:::::::f                    y:::::::y        "
+    echo " QQ::::::::::::::Q  u:::::::::::::::ua:::::aaaa::::::a d:::::::::::::::::di::::::if:::::::f                     y:::::y         "
+    echo "   QQ:::::::::::Q    uu::::::::uu:::u a::::::::::aa:::a d:::::::::ddd::::di::::::if:::::::f                    y:::::y          "
+    echo "     QQQQQQQQ::::QQ    uuuuuuuu  uuuu  aaaaaaaaaa  aaaa  ddddddddd   dddddiiiiiiiifffffffff                   y:::::y           "
+    echo "             Q:::::Q                                                                                         y:::::y            "
+    echo "              QQQQQQ                                                                                        y:::::y             "
+    echo "                                                                                                           y:::::y              "
+    echo "                                                                                                          yyyyyyy               "
+    echo "                                                                                                                                 "
+    echo -e "\033[0m"
 }
 
 # ============================
@@ -239,6 +254,40 @@ update_buttonsleds_address() {
 }
 
 # ============================
+#   Configure Samba
+# ============================
+
+# Add the Samba setup function
+setup_samba() {
+    log_progress "Configuring Samba for Quadify..."
+
+    SMB_CONF="/etc/samba/smb.conf"
+
+    # Backup the original smb.conf
+    if [ ! -f "$SMB_CONF.bak" ]; then
+        run_command "cp $SMB_CONF $SMB_CONF.bak"
+        log_message "info" "Backup of smb.conf created."
+    fi
+
+    # Append Samba configuration for Quadify
+    if ! grep -q "\[Quadify\]" "$SMB_CONF"; then
+        echo -e "\n[Quadify]\n   path = /home/volumio/Quadify\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = volumio\n   create mask = 0777\n   directory mask = 0777\n   public = yes" >> "$SMB_CONF"
+        log_message "success" "Samba configuration for Quadify added."
+    else
+        log_message "info" "Samba configuration for Quadify already exists."
+    fi
+
+    # Restart Samba service
+    run_command "systemctl restart smbd"
+    log_message "success" "Samba service restarted."
+
+    # Set ownership and permissions for the Quadify directory
+    run_command "chown -R volumio:volumio /home/volumio/Quadify"
+    run_command "chmod -R 777 /home/volumio/Quadify"
+    log_message "success" "Permissions for /home/volumio/Quadify set successfully."
+}
+
+# ============================
 #   Configure Systemd Service
 # ============================
 setup_main_service() {
@@ -361,6 +410,9 @@ main() {
 
     # Add the new configuration step here
     configure_buttons_leds
+
+    # Add the Samba setup step
+    setup_samba
 
     set_permissions
     log_message "success" "Installation complete. Please verify the setup."
