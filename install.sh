@@ -315,6 +315,104 @@ setup_main_service() {
 }
 
 # ============================
+#   Update MPD Configuration
+# ============================
+configure_mpd() {
+    log_progress "Configuring MPD for CAVA..."
+
+    MPD_CONF_FILE="/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl"
+    FIFO_OUTPUT="
+audio_output {
+    type            \"fifo\"
+    name            \"my_fifo\"
+    path            \"/tmp/cava.fifo\"
+    format          \"44100:16:2\"
+}"
+
+    # Check if the FIFO configuration already exists
+    if grep -q "path.*\"/tmp/cava.fifo\"" "$MPD_CONF_FILE"; then
+        log_message "info" "FIFO output configuration already exists in MPD config."
+    else
+        log_progress "Adding FIFO output configuration to MPD config..."
+        echo "$FIFO_OUTPUT" | sudo tee -a "$MPD_CONF_FILE" > /dev/null
+        log_message "success" "FIFO output configuration added to MPD config."
+    fi
+
+    # Restart MPD to apply changes
+    run_command "sudo systemctl restart mpd"
+    log_message "success" "MPD restarted with updated configuration."
+}
+
+
+# ============================
+#   Install CAVA Dependencies and Build
+# ============================
+install_cava_from_fork() {
+    log_progress "Installing CAVA from fork..."
+
+    CAVA_REPO="git@github.com:theshepherdmatt/cava.git"
+    CAVA_INSTALL_DIR="/home/volumio/cava"
+
+    # Install dependencies required to build CAVA
+    log_progress "Installing CAVA dependencies..."
+    run_command "apt-get install -y \
+        libfftw3-dev \
+        libasound2-dev \
+        libncursesw5-dev \
+        libpulse-dev \
+        libtool \
+        automake \
+        autoconf \
+        gcc \
+        make \
+        pkg-config"
+
+    log_message "success" "CAVA dependencies installed successfully."
+
+    # Clone the forked CAVA repository
+    if [[ ! -d "$CAVA_INSTALL_DIR" ]]; then
+        run_command "git clone $CAVA_REPO $CAVA_INSTALL_DIR"
+        log_message "success" "Cloned CAVA repository from fork."
+    else
+        log_message "info" "CAVA repository already exists. Pulling latest changes..."
+        run_command "cd $CAVA_INSTALL_DIR && git pull"
+    fi
+
+    # Build and install CAVA
+    log_progress "Building and installing CAVA..."
+    run_command "cd $CAVA_INSTALL_DIR && ./autogen.sh && ./configure && make && sudo make install"
+    log_message "success" "CAVA installed successfully."
+}
+
+# ============================
+#   Configure CAVA Service
+# ============================
+setup_cava_service() {
+    log_progress "Setting up the CAVA Service..."
+
+    CAVA_SERVICE_FILE="/etc/systemd/system/cava.service"
+
+    # Copy the CAVA service file from the service folder
+    if [[ -f "/home/volumio/Quadify/service/cava.service" ]]; then
+        run_command "cp /home/volumio/Quadify/service/cava.service \"$CAVA_SERVICE_FILE\""
+        log_message "success" "cava.service copied to $CAVA_SERVICE_FILE."
+    else
+        log_message "error" "Service file cava.service not found in services directory."
+        exit 1
+    fi
+
+    # Reload systemd daemon to recognize the new service
+    run_command "systemctl daemon-reload"
+
+    # Enable and start the CAVA service
+    run_command "systemctl enable cava.service"
+    run_command "systemctl start cava.service"
+
+    log_message "success" "CAVA Service has been enabled and started."
+}
+
+
+# ============================
 #   Configure Buttons and LEDs
 # ============================
 configure_buttons_leds() {
@@ -401,22 +499,31 @@ main() {
     banner
     log_message "info" "Starting the installation script..."
     check_root
+
+    # System setup
     install_system_dependencies
     enable_i2c_spi
     upgrade_pip
     install_python_dependencies
-    detect_i2c_address
-    setup_main_service
 
-    # Add the new configuration step here
+    # Hardware configuration
+    detect_i2c_address
     configure_buttons_leds
 
-    # Add the Samba setup step
+    # Install and configure services
+    install_cava_from_fork
+    setup_cava_service
+    setup_main_service
+
+    # Configure MPD for CAVA
+    configure_mpd
+
+    # Network and file sharing setup
     setup_samba
 
+    # Final permissions
     set_permissions
+
     log_message "success" "Installation complete. Please verify the setup."
 }
 
-# Execute the main function
-main
