@@ -406,6 +406,40 @@ install_cava_from_fork() {
     log_message "success" "CAVA installed successfully."
 }
 
+
+# ============================
+#   Install CAVA Configuration
+# ============================
+
+setup_cava_config() {
+    log_progress "Setting up CAVA configuration..."
+
+    CONFIG_DIR="/home/volumio/.config/cava"
+    CONFIG_FILE="$CONFIG_DIR/config"
+    REPO_CONFIG_FILE="/home/volumio/cava/config/default_config"
+
+    # Create the configuration directory
+    run_command "mkdir -p $CONFIG_DIR"
+
+    # Check if the file already exists in the destination
+    if [[ ! -f $CONFIG_FILE ]]; then
+        if [[ -f $REPO_CONFIG_FILE ]]; then
+            log_message "info" "Copying default CAVA configuration from repository."
+            run_command "cp $REPO_CONFIG_FILE $CONFIG_FILE"
+        else
+            log_message "error" "Default configuration file not found in repository."
+            exit 1
+        fi
+    else
+        log_message "info" "CAVA configuration already exists. Skipping copy."
+    fi
+
+    # Set ownership and permissions
+    run_command "chown -R volumio:volumio $CONFIG_DIR"
+    log_message "success" "CAVA configuration setup completed."
+}
+
+
 # ============================
 #   Configure CAVA Service
 # ============================
@@ -535,6 +569,9 @@ main() {
     # Install CAVA and configure its service
     install_cava_from_fork
     echo "DEBUG: Finished installing CAVA from fork"
+
+    setup_cava_config
+    echo "DEBUG: Finished installing CAVA Configuration"
 
     setup_cava_service
     echo "DEBUG: Finished installing CAVA Service"
