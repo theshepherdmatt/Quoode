@@ -359,7 +359,7 @@ check_cava_installed() {
 install_cava_from_fork() {
     log_progress "Installing CAVA from fork..."
 
-    CAVA_REPO="git@github.com:theshepherdmatt/cava.git"
+    CAVA_REPO="https://github.com/theshepherdmatt/cava.git"
     CAVA_INSTALL_DIR="/home/volumio/cava"
 
     # Check if CAVA is already installed
