@@ -380,7 +380,9 @@ install_cava_from_fork() {
         autoconf \
         gcc \
         make \
-        pkg-config"
+        pkg-config \
+        libiniparser-dev"
+
     log_message "success" "CAVA dependencies installed successfully."
 
     # Clone the forked CAVA repository
