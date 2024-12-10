@@ -85,8 +85,8 @@ class MenuManager:
             visible_items = self.get_visible_window(self.current_menu_items, self.window_size)
 
             # Constants for layout
-            icon_size = 40  # Fixed size for icons
-            spacing = 10    # Fixed spacing between icons
+            icon_size = 30  # Fixed size for icons
+            spacing = 15    # Fixed spacing between icons
             total_width = self.display_manager.oled.width
             total_height = self.display_manager.oled.height
 
