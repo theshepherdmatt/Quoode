@@ -76,7 +76,7 @@ class DetailedPlaybackManager(BaseManager):
         # Add debug log for the number of bars
         self.logger.debug(f"Number of bars: {len(bars)}")
 
-        vertical_offset = -10  # Move up by 15 pixels
+        vertical_offset = -8  # Move up by 15 pixels
 
         for i, bar in enumerate(bars):
             bar_height = int((bar / 255) * max_height)
@@ -84,7 +84,7 @@ class DetailedPlaybackManager(BaseManager):
             x2 = x1 + bar_width
             y1 = height - bar_height + vertical_offset
             y2 = height + vertical_offset
-            draw.rectangle([x1, y1, x2, y2], fill="#202020")  # Grey colour
+            draw.rectangle([x1, y1, x2, y2], fill="#303030")  # Grey colour
 
 
       
