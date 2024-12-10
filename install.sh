@@ -347,11 +347,26 @@ audio_output {
 # ============================
 #   Install CAVA Dependencies and Build
 # ============================
+check_cava_installed() {
+    if command -v cava >/dev/null 2>&1; then
+        log_message "info" "CAVA is already installed. Skipping installation."
+        return 0
+    else
+        return 1
+    fi
+}
+
 install_cava_from_fork() {
     log_progress "Installing CAVA from fork..."
 
     CAVA_REPO="git@github.com:theshepherdmatt/cava.git"
     CAVA_INSTALL_DIR="/home/volumio/cava"
+
+    # Check if CAVA is already installed
+    if check_cava_installed; then
+        log_message "info" "Skipping CAVA installation."
+        return
+    fi
 
     # Install dependencies required to build CAVA
     log_progress "Installing CAVA dependencies..."
@@ -366,7 +381,6 @@ install_cava_from_fork() {
         gcc \
         make \
         pkg-config"
-
     log_message "success" "CAVA dependencies installed successfully."
 
     # Clone the forked CAVA repository
@@ -380,7 +394,13 @@ install_cava_from_fork() {
 
     # Build and install CAVA
     log_progress "Building and installing CAVA..."
-    run_command "cd $CAVA_INSTALL_DIR && ./autogen.sh && ./configure && make && sudo make install"
+    run_command "cd $CAVA_INSTALL_DIR && ./autogen.sh"
+    log_message "info" "autogen.sh completed"
+    run_command "cd $CAVA_INSTALL_DIR && ./configure"
+    log_message "info" "configure completed"
+    run_command "cd $CAVA_INSTALL_DIR && make"
+    log_message "info" "make completed"
+    run_command "cd $CAVA_INSTALL_DIR && sudo make install"
     log_message "success" "CAVA installed successfully."
 }
 
@@ -499,31 +519,33 @@ main() {
     banner
     log_message "info" "Starting the installation script..."
     check_root
-
-    # System setup
     install_system_dependencies
     enable_i2c_spi
     upgrade_pip
     install_python_dependencies
-
-    # Hardware configuration
     detect_i2c_address
-    configure_buttons_leds
-
-    # Install and configure services
-    install_cava_from_fork
-    setup_cava_service
     setup_main_service
 
-    # Configure MPD for CAVA
+    # Update MPD configuration
     configure_mpd
+    echo "DEBUG: Finished installing MPD"
 
-    # Network and file sharing setup
+    # Install CAVA and configure its service
+    install_cava_from_fork
+    echo "DEBUG: Finished installing CAVA from fork"
+
+    setup_cava_service
+    echo "DEBUG: Finished installing CAVA Service"
+
+    # Add the new configuration step here
+    configure_buttons_leds
+
+    # Add the Samba setup step
     setup_samba
 
-    # Final permissions
     set_permissions
-
     log_message "success" "Installation complete. Please verify the setup."
 }
 
+# Execute the main function
+main
