@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # ============================
 #   Variables for Progress Tracking
 # ============================
-TOTAL_STEPS=11  # Updated from 10 to 11
+TOTAL_STEPS=17  # Updated from 10 to 11
 CURRENT_STEP=0
 LOG_FILE="install.log"
 
