@@ -1,62 +1,38 @@
-# test_detailed_playback_manager.py
-from PIL import ImageFont
-from detailed_playback_manager import DetailedPlaybackManager
-from mock_dependencies import MockDisplayManager, MockVolumioListener, MockModeManager
+import os
+import time
 
-# Mock dependencies for testing (replace with actual dependencies if needed)
+fifo_path = "/tmp/cava_fifo"
+
+# Ensure the FIFO exists
+if not os.path.exists(fifo_path):
+    raise FileNotFoundError(f"FIFO file not found: {fifo_path}")
+
+# Simulated DisplayManager class (replace with your actual implementation)
 class MockDisplayManager:
-    def __init__(self):
-        self.oled = MockOLED()
-        self.fonts = {
-            'playback_medium': ImageFont.load_default(),
-            'progress_bar': ImageFont.load_default(),
-        }
-        self.icons = {
-            'spotify': ImageFont.load_default(),
-            'tidal': ImageFont.load_default(),
-            'qobuz': ImageFont.load_default(),
-            # Add more mock icons if needed
-        }
+    def draw_custom(self, draw_function):
+        # Simulate drawing to the OLED by printing to terminal
+        draw_function()
 
-    def clear_screen(self):
-        print("Screen cleared!")
+display_manager = MockDisplayManager()  # Replace with your actual DisplayManager instance
 
-class MockOLED:
-    def __init__(self):
-        self.size = (128, 64)  # Replace with your screen size
-        self.mode = "RGB"
+def render_bars(bars):
+    """Render bars on the OLED display."""
+    bar_height = ["█" * int(bar) for bar in bars]  # Create text-based bars for testing
+    for i, bar in enumerate(bar_height):
+        print(f"Bar {i}: {bar}")  # Replace this with OLED rendering logic
 
-    def display(self, image):
-        print("Image displayed on screen!")
+# Read from the FIFO file in a loop
+try:
+    with open(fifo_path, "r") as fifo:
+        while True:
+            # Read a line of ASCII numbers from CAVA's output
+            line = fifo.readline().strip()
+            if line:
+                # Parse numbers into a list of integers
+                bars = [int(value) for value in line.split()]
+                # Send parsed data to the OLED display
+                display_manager.draw_custom(lambda: render_bars(bars))
+            time.sleep(0.05)  # Small delay to avoid excessive CPU usage
+except KeyboardInterrupt:
+    print("Stopped visualisation.")
 
-class MockVolumioListener:
-    def get_current_state(self):
-        return {
-            "title": "Mock Song Title",
-            "artist": "Mock Artist Name",
-            "progress": 0.5,
-            "service": "spotify",
-        }
-
-class MockModeManager:
-    pass
-
-# Initialize mock dependencies
-display_manager = MockDisplayManager()
-volumio_listener = MockVolumioListener()
-mode_manager = MockModeManager()
-
-# Initialize the DetailedPlaybackManager
-detailed_playback_manager = DetailedPlaybackManager(display_manager, volumio_listener, mode_manager)
-
-# Test data
-test_data = {
-    "title": "Test Song Title That Might Be Too Long for the Screen",
-    "artist": "Test Artist With A Very Long Name",
-    "progress": 0.65,
-    "service": "spotify",
-}
-
-# Draw the test display
-detailed_playback_manager.draw_display(test_data)
-print("Test display updated!")
