@@ -17,23 +17,18 @@ Contained within are all necessary files and instructions to equip your Raspberr
 
 * An active internet connection is crucial.** for the download of necessary components, as the installation cannot proceed offline.
 
-## Usage : 
-* Update package repo list
-```bash
-sudo apt-get update
-```
 
-* Download source files (this repository).
+* Step 1: Download source files (this repository).
 ```bash
 git clone https://github.com/theshepherdmatt/Quadify.git
 ```
 
-* Enter the directory for Volumio
+* Step 2: Enter the directory for Volumio
 ```bash
 cd Quadify
 ```
 
-* Run the installation script **as root** to install all available features
+* Step 3: Run the installation script **as root** to install all available features
 ```bash
 sudo bash install.sh
 ```
