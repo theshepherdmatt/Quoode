@@ -99,7 +99,7 @@ check_root() {
 #   Install System-Level Dependencies
 # ============================
 install_system_dependencies() {
-    log_progress "Installing system-level dependencies..."
+    log_progress "Installing system-level dependencies, this might take a while....."
 
     # Update package lists
     run_command "apt-get update"
@@ -142,7 +142,7 @@ upgrade_pip() {
 #   Install Python Dependencies
 # ============================
 install_python_dependencies() {
-    log_progress "Installing Python dependencies..."
+    log_progress "Installing Python dependencies, this might take a bit longer....."
 
     # Install pycairo first to resolve PyGObject dependency
     run_command "python3.7 -m pip install --upgrade --ignore-installed pycairo"
