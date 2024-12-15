@@ -1,5 +1,5 @@
 import logging
-from PIL import Image, ImageDraw, ImageFont, ImageSequence
+from PIL import Image, ImageDraw, ImageFont, ImageSequence, ImageFilter, ImageEnhance
 from luma.core.interface.serial import spi
 from luma.oled.device import ssd1322
 import threading
@@ -38,8 +38,12 @@ class DisplayManager:
         self._load_fonts()
         self.icons = {}
 
-        # Define the services and load their corresponding icons
-        services = ["stream", "library", "playlists", "qobuz", "tidal", "spop", "spotify", "webradio", "mpd", "default", "nas", "usb", "display", "displayfm4", "displaymodern", "volume"]
+        # Load the default icon first
+        self.default_icon = self.load_default_icon()
+
+        # Define the services and load their corresponding icons (excluding 'default')
+        services = ["stream", "library", "playlists", "qobuz", "tidal", "spop", "spotify",
+                    "webradio", "mpd", "nas", "usb", "display", "volume"]
         icon_dir = self.config.get('icon_dir', "/home/volumio/Quadify/src/assets/images")
 
         for service in services:
@@ -57,7 +61,7 @@ class DisplayManager:
                     icon = background
                     self.logger.info(f"Handled transparency for icon '{service}'.")
 
-                # Resize the icon to fit and convert to RGB mode
+                # Resize the icon with consistent resampling
                 icon = icon.resize((35, 35), Image.LANCZOS).convert("RGB")
                 self.icons[service] = icon
                 self.logger.info(f"Loaded icon for '{service}' from '{icon_path}'.")
@@ -67,18 +71,25 @@ class DisplayManager:
                 # Fallback to the default icon in case the specific icon is missing
                 self.icons[service] = self.default_icon  # Use the pre-loaded default_icon
 
-
-        # Load the default icon separately, if needed
+    def load_default_icon(self):
+        """Loads the default icon from the specified path."""
+        icon_dir = self.config.get('icon_dir', "/home/volumio/Quadify/src/assets/images")
         default_icon_path = os.path.join(icon_dir, "default.png")
         try:
-            self.default_icon = Image.open(default_icon_path).resize((35, 35), Image.ANTIALIAS).convert("RGB")
+            icon = Image.open(default_icon_path)
+            # Handle transparency if present
+            if icon.mode == "RGBA":
+                background = Image.new("RGB", icon.size, (0, 0, 0))
+                background.paste(icon, mask=icon.split()[3])
+                icon = background
+                self.logger.info(f"Handled transparency for default icon.")
+            # Resize and convert consistently
+            icon = icon.resize((35, 35), Image.LANCZOS).convert("RGB")
             self.logger.info(f"Loaded default icon from '{default_icon_path}'.")
+            return icon
         except IOError:
             self.logger.warning("Default icon not found. Creating grey placeholder.")
-            self.default_icon = Image.new("RGB", (35, 35), "grey")
-
-        # Callback list for mode changes
-        self.on_mode_change_callbacks = []
+            return Image.new("RGB", (35, 35), "grey")
 
     def add_on_mode_change_callback(self, callback):
         """Register a callback to be executed on mode changes."""
@@ -101,7 +112,7 @@ class DisplayManager:
     def _load_fonts(self):
         fonts_config = self.config.get('fonts', {})
         default_font = ImageFont.load_default()
-        
+
         for key, font_info in fonts_config.items():
             path = font_info.get('path')
             size = font_info.get('size', 12)
@@ -140,7 +151,7 @@ class DisplayManager:
 
                 # Resize and convert as needed
                 if resize:
-                    image = image.resize(self.oled.size, Image.ANTIALIAS)
+                    image = image.resize(self.oled.size, Image.LANCZOS)
 
                 # Convert to match the OLED's mode
                 image = image.convert(self.oled.mode)

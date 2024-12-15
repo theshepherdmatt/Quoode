@@ -1,6 +1,6 @@
 # src/managers/tidal_manager.py
 
-from managers.base_manager import BaseManager
+from managers.menus.base_manager import BaseManager
 import logging
 from PIL import ImageFont
 import threading

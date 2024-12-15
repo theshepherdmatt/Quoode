@@ -10,7 +10,7 @@ from requests.adapters import HTTPAdapter
 from urllib.parse import quote
 from urllib3.util.retry import Retry
 from PIL import Image, ImageDraw, ImageFont
-from managers.base_manager import BaseManager  # Adjust import based on your project structure
+from managers.menus.base_manager import BaseManager  # Adjust import based on your project structure
 
 class LibraryManager(BaseManager):
     def __init__(self, display_manager, volumio_config, mode_manager, window_size=3, y_offset=0, line_spacing=16):

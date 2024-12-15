@@ -1,6 +1,6 @@
 # src/managers/detailed_playback_manager.py
 
-from managers.base_manager import BaseManager
+from managers.menus.base_manager import BaseManager
 import logging
 from PIL import Image, ImageDraw, ImageFont
 import threading

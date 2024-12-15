@@ -19,10 +19,10 @@ class MenuManager:
 
         # Menu initialization
         self.menu_stack = []
-        self.current_menu_items = ["Stream", "Library", "Radio", "Playlists", "Display"]  # Added Display menu
+        self.current_menu_items = ["Stream", "Library", "Playlists", "Radio", "Display"]  # Added Display menu
         self.stream_menu_items = ["Tidal", "Qobuz", "Spotify"]
         self.library_menu_items = ["NAS", "USB"]
-        self.display_menu_items = ["FM4", "Modern"]  # New Display sub-menu
+        self.display_menu_items = ["Original", "Modern"]  # New Display sub-menu
         self.icons = {
             "Stream": self.display_manager.icons.get("stream"),
             "Library": self.display_manager.icons.get("library"),
@@ -34,8 +34,8 @@ class MenuManager:
             "NAS": self.display_manager.icons.get("nas"), 
             "USB": self.display_manager.icons.get("usb"),
             "Display": self.display_manager.icons.get("display"),  # Icon for Display menu
-            "FM4": self.display_manager.icons.get("displayfm4"),  # Icon for FM4
-            "Modern": self.display_manager.icons.get("displaymodern")  # Icon for Modern
+            "Original": self.display_manager.icons.get("display"),  # Icon for Original
+            "Modern": self.display_manager.icons.get("display")  # Icon for Modern
         }
         self.current_selection_index = 0
         self.is_active = False
@@ -61,7 +61,7 @@ class MenuManager:
     def start_mode(self):
         self.is_active = True
         # Reset to top-level menu items
-        self.current_menu_items = ["Stream", "Library", "Radio", "Playlists", "Display"]
+        self.current_menu_items = ["Stream", "Library", "Playlists", "Radio", "Display"]
         self.current_selection_index = 0
         self.window_start_index = 0
         # Schedule display_menu without blocking
@@ -86,7 +86,7 @@ class MenuManager:
 
             # Constants for layout
             icon_size = 30  # Fixed size for icons
-            spacing = 15    # Fixed spacing between icons
+            spacing = 15    # Fixed spacing between icons for better horizontal separation
             total_width = self.display_manager.oled.width
             total_height = self.display_manager.oled.height
 
@@ -97,7 +97,7 @@ class MenuManager:
             x_offset = (total_width - total_icons_width) // 2
 
             # Y position for the icons
-            y_position = (total_height - icon_size) // 2 - 10  # Centered vertically with slight offset
+            y_position = (total_height - icon_size) // 2 - 10  # Adjust as needed for vertical centering
 
             # Create an image to draw on
             base_image = Image.new("RGB", self.display_manager.oled.size, "black")
@@ -123,31 +123,40 @@ class MenuManager:
                 # Adjust position of the selected item to "pop out" slightly
                 if actual_index == self.current_selection_index:
                     y_adjustment = -5  # Move the selected icon up slightly
+                    # Optionally, add a highlight or border around the selected icon
+                    border_size = 0
+                    # Draw a rectangle around the selected icon
+                    draw_obj.rectangle(
+                        [x - border_size, y_position - border_size + y_adjustment,
+                        x + icon_size + border_size, y_position + icon_size + border_size + y_adjustment],
+                        outline="black",
+                        width=border_size
+                    )
                 else:
                     y_adjustment = 0  # Keep other icons at the normal position
 
                 # Paste the icon onto the base image
                 base_image.paste(icon, (x, y_position + y_adjustment))
 
-                # Draw labels below icons
-                label = item
-                font = self.display_manager.fonts.get(self.font_key, ImageFont.load_default())
-                text_color = "white" if actual_index == self.current_selection_index else "gray"
+                # Draw label only for the selected item
+                if actual_index == self.current_selection_index:
+                    label = item
+                    # Use bold font for selected item if available
+                    font = self.display_manager.fonts.get(self.bold_font_key, self.display_manager.fonts.get(self.font_key, ImageFont.load_default()))
+                    text_color = "white"  # Consistent color for selected text
 
-                # Calculate text size
-                text_width, text_height = draw_obj.textsize(label, font=font)
-                text_x = x + (icon_size - text_width) // 2
-                text_y = y_position + icon_size + 3  # Position text slightly below the icon
+                    # Calculate text size
+                    text_width, text_height = draw_obj.textsize(label, font=font)
+                    text_x = x + (icon_size - text_width) // 2
+                    text_y = y_position + icon_size + 5  # Increased vertical gap for text
 
-                # Draw the label
-                draw_obj.text((text_x, text_y), label, font=font, fill=text_color)
+                    # Draw the label
+                    draw_obj.text((text_x, text_y), label, font=font, fill=text_color)
 
             # Convert the image to the OLED display mode and render it
             base_image = base_image.convert(self.display_manager.oled.mode)
             self.display_manager.oled.display(base_image)
-            self.logger.info("MenuManager: Icon row menu displayed with scrolling effect.")
-
-
+            self.logger.info("MenuManager: Icon row menu displayed with selected text only.")
 
 
     def get_visible_window(self, items, window_size):
@@ -218,15 +227,15 @@ class MenuManager:
             self.window_start_index = 0
             self.display_menu()
         elif selected_item == "Display":
-            # Navigate into Display menu (with FM4 and Modern options)
+            # Navigate into Display menu (with Original and Modern options)
             self.menu_stack.append(self.current_menu_items)
             self.current_menu_items = self.display_menu_items
             self.current_selection_index = 0
             self.window_start_index = 0
             self.display_menu()
-        if selected_item == "FM4":
-            self.mode_manager.to_fm4()
-            self.logger.info("MenuManager: Switching to FM4 screen.")
+        if selected_item == "Original":
+            self.mode_manager.to_Original()
+            self.logger.info("MenuManager: Switching to Original screen.")
             self.mode_manager.to_menu()  # Return to menu after selection
         elif selected_item == "Modern":
             self.mode_manager.to_modern()

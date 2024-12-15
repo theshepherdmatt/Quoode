@@ -10,25 +10,25 @@ from PIL import Image, ImageSequence
 
 # Importing components from the src directory
 from display.display_manager import DisplayManager
-from display.clock import Clock
-from display.playback_manager import PlaybackManager
-from display.radioplayback_manager import RadioPlaybackManager
-from display.detailed_playback_manager import DetailedPlaybackManager
+from display.screens.clock import Clock
+from display.screens.playback_manager import PlaybackManager
+from display.screens.radioplayback_manager import RadioPlaybackManager
+from display.screens.detailed_playback_manager import DetailedPlaybackManager
 from managers.mode_manager import ModeManager
 from managers.menu_manager import MenuManager
-from managers.playlist_manager import PlaylistManager
-from managers.radio_manager import RadioManager
-from managers.tidal_manager import TidalManager
-from managers.qobuz_manager import QobuzManager
-from managers.spotify_manager import SpotifyManager
-from managers.library_manager import LibraryManager
-from managers.usb_library_manager import USBLibraryManager
+from managers.menus.playlist_manager import PlaylistManager
+from managers.menus.radio_manager import RadioManager
+from managers.menus.tidal_manager import TidalManager
+from managers.menus.qobuz_manager import QobuzManager
+from managers.menus.spotify_manager import SpotifyManager
+from managers.menus.library_manager import LibraryManager
+from managers.menus.usb_library_manager import USBLibraryManager
 from controls.rotary_control import RotaryControl
 from network.volumio_listener import VolumioListener
 from hardware.buttonsleds import ButtonsLEDController
 from handlers.state_handler import StateHandler
 from display.screen_manager import ScreenManager
-#from display.volume_overlay_manager import VolumeOverlayManager
+from managers.manager_factory import ManagerFactory
 
 
 def load_config(config_path='/config.yaml'):
@@ -166,43 +166,36 @@ def main():
     mode_manager = ModeManager(
         display_manager=display_manager,
         clock=clock,
-        volumio_listener=volumio_listener
+        volumio_listener=volumio_listener,
     )
 
-    # 15. Initialize DetailedPlaybackManager first (without VolumeOverlayManager)
-    detailed_playback_manager = DetailedPlaybackManager(
+    # Initialize ManagerFactory with the required dependencies
+    manager_factory = ManagerFactory(
         display_manager=display_manager,
         volumio_listener=volumio_listener,
-        mode_manager=mode_manager,
+        mode_manager=mode_manager,  # Use the initialized ModeManager
+        config=config 
     )
 
-    # 18. Initialize other managers, passing in mode_manager
-    playback_manager = PlaybackManager(display_manager, volumio_listener, mode_manager)
-    radioplayback_manager = RadioPlaybackManager(display_manager, volumio_listener, mode_manager)
-    menu_manager = MenuManager(display_manager, volumio_listener, mode_manager)
-    playlist_manager = PlaylistManager(display_manager, volumio_listener, mode_manager)
-    radio_manager = RadioManager(display_manager, volumio_listener, mode_manager)
-    tidal_manager = TidalManager(display_manager, volumio_listener, mode_manager)
-    qobuz_manager = QobuzManager(display_manager, volumio_listener, mode_manager)
-    spotify_manager = SpotifyManager(display_manager, volumio_listener, mode_manager)
-    library_manager = LibraryManager(display_manager, config.get('volumio', {}), mode_manager)
-    usb_library_manager = USBLibraryManager(display_manager, volumio_listener, mode_manager)
-    screen_manager = ScreenManager(playback_manager, detailed_playback_manager)
+    # Set up ModeManager with all components
+    manager_factory.setup_mode_manager()
+
+    # Access the managers via factory's attributes
+    playback_manager = manager_factory.playback_manager
+    radioplayback_manager = manager_factory.radioplayback_manager
+    menu_manager = manager_factory.menu_manager
+    playlist_manager = manager_factory.playlist_manager
+    radio_manager = manager_factory.radio_manager
+    tidal_manager = manager_factory.tidal_manager
+    qobuz_manager = manager_factory.qobuz_manager
+    spotify_manager = manager_factory.spotify_manager
+    library_manager = manager_factory.library_manager
+    usb_library_manager = manager_factory.usb_library_manager
+    screen_manager = manager_factory.screen_manager
+
+    # Log the initialization of the ScreenManager
     logging.info(f"Main: ScreenManager initialized with current screen: {screen_manager.get_current_screen()}")
 
-    # 19. Set the managers in mode_manager
-    mode_manager.set_playback_manager(playback_manager)
-    mode_manager.set_radioplayback_manager(radioplayback_manager)
-    mode_manager.set_menu_manager(menu_manager)
-    mode_manager.set_playlist_manager(playlist_manager)
-    mode_manager.set_radio_manager(radio_manager)
-    mode_manager.set_tidal_manager(tidal_manager)
-    mode_manager.set_qobuz_manager(qobuz_manager)
-    mode_manager.set_spotify_manager(spotify_manager)
-    mode_manager.set_library_manager(library_manager)
-    mode_manager.set_usb_library_manager(usb_library_manager)
-    mode_manager.set_detailed_playback_manager(detailed_playback_manager)
-    mode_manager.screen_manager = screen_manager
 
     # 20. Assign mode_manager to volumio_listener
     volumio_listener.mode_manager = mode_manager

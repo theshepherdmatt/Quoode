@@ -18,7 +18,7 @@ class ModeManager:
         {'name': 'library', 'on_enter': 'enter_library'},
         {'name': 'usblibrary', 'on_enter': 'enter_usb_library'},
         {'name': 'spotify', 'on_enter': 'enter_spotify'},
-        {'name': 'fm4', 'on_enter': 'enter_fm4'},
+        {'name': 'Original', 'on_enter': 'enter_Original'},
         {'name': 'modern', 'on_enter': 'enter_modern'},
     ]
 
@@ -71,7 +71,7 @@ class ModeManager:
         self.machine.add_transition(trigger='to_usb_library', source='*', dest='usblibrary')
         self.machine.add_transition(trigger='to_clock', source='*', dest='clock')
         self.machine.add_transition(trigger='to_spotify', source='*', dest='spotify')
-        self.machine.add_transition(trigger='to_fm4', source='*', dest='fm4')
+        self.machine.add_transition(trigger='to_Original', source='*', dest='Original')
         self.machine.add_transition(trigger='to_modern', source='*', dest='modern')
 
         # Callback handling
@@ -388,8 +388,8 @@ class ModeManager:
         else:
             self.logger.error("ModeManager: spotify_manager is not set.")
 
-    def enter_fm4(self, event):
-        self.logger.info("ModeManager: Entering FM4 mode.")
+    def enter_Original(self, event):
+        self.logger.info("ModeManager: Entering Original mode.")
 
         # Stop clock
         if self.clock:
@@ -405,10 +405,10 @@ class ModeManager:
 
         # Delegate screen handling to ScreenManager
         if self.screen_manager:
-            self.screen_manager.set_current_screen("playback")  # Activates FM4 playback screen
-            self.logger.info("ModeManager: ScreenManager handled FM4 screen activation.")
+            self.screen_manager.set_current_screen("playback")  # Activates Original playback screen
+            self.logger.info("ModeManager: ScreenManager handled Original screen activation.")
         else:
-            self.logger.error("ModeManager: ScreenManager is not set. Cannot activate FM4 screen.")
+            self.logger.error("ModeManager: ScreenManager is not set. Cannot activate Original screen.")
 
 
     def enter_modern(self, event):

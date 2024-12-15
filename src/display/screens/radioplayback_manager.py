@@ -1,5 +1,7 @@
 # src/managers/webradio_manager.py
 
+from managers.menus.base_manager import BaseManager
+
 import os
 import logging
 from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
@@ -7,7 +9,7 @@ import requests
 from io import BytesIO
 import threading
 
-class RadioPlaybackManager:
+class RadioPlaybackManager(BaseManager):
     def __init__(self, display_manager, volumio_listener, mode_manager):
         self.mode_manager = mode_manager
         self.display_manager = display_manager
