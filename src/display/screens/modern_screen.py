@@ -1,4 +1,4 @@
-# src/managers/detailed_playback_manager.py
+# src/managers/modern_screen.py
 
 from managers.menus.base_manager import BaseManager
 import logging
@@ -9,10 +9,10 @@ import os
 
 FIFO_PATH = "/tmp/display.fifo"  # Path to the FIFO for CAVA
 
-class DetailedPlaybackManager(BaseManager):
+class ModernScreen(BaseManager):
     def __init__(self, display_manager, volumio_listener, mode_manager):
         super().__init__(display_manager, volumio_listener, mode_manager)
-        self.mode_name = "detailed_playback"
+        self.mode_name = "modern_screen"
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG)
         self.spectrum_bars = []
@@ -41,11 +41,11 @@ class DetailedPlaybackManager(BaseManager):
         # Update thread
         self.update_thread = threading.Thread(target=self.update_display_loop, daemon=True)
         self.update_thread.start()
-        self.logger.info("DetailedPlaybackManager: Started background update thread.")
+        self.logger.info("ModernScreen: Started background update thread.")
 
         # Volumio state change listener
         self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
-        self.logger.info("DetailedPlaybackManager initialized.")
+        self.logger.info("ModernScreen initialized.")
 
     def _read_fifo(self):
         """Read spectrum data from FIFO."""
@@ -76,7 +76,7 @@ class DetailedPlaybackManager(BaseManager):
         # Add debug log for the number of bars
         self.logger.debug(f"Number of bars: {len(bars)}")
 
-        vertical_offset = -8  # Move up by 15 pixels
+        vertical_offset = -8  # Move up by 8 pixels
 
         for i, bar in enumerate(bars):
             bar_height = int((bar / 255) * max_height)
@@ -86,12 +86,9 @@ class DetailedPlaybackManager(BaseManager):
             y2 = height + vertical_offset
             draw.rectangle([x1, y1, x2, y2], fill="#303030")  # Grey colour
 
-
-      
-
     def reset_scrolling(self):
         """Reset scrolling parameters."""
-        self.logger.debug("DetailedPlaybackManager: Resetting scrolling offsets.")
+        self.logger.debug("ModernScreen: Resetting scrolling offsets.")
         self.scroll_offset_title = 0
         self.scroll_offset_artist = 0
 
@@ -131,15 +128,15 @@ class DetailedPlaybackManager(BaseManager):
                     self.current_state["seek"] += int(elapsed_time * 1000)  # Increment seek by elapsed ms
                     last_update_time = time.time()
 
-            if self.is_active and self.mode_manager.screen_manager.get_current_screen() == "detailed_playback" and self.current_state:
+            if self.is_active and self.mode_manager.get_mode() == "modern_screen" and self.current_state:
                 # Since VolumeOverlayManager is removed, always redraw the playback screen
-                self.logger.debug("DetailedPlaybackManager: Redrawing playback screen.")
+                self.logger.debug("ModernScreen: Redrawing playback screen.")
                 self.draw_display(self.current_state)
 
     def draw_display(self, data):
         """Draw the detailed playback display with smooth and continuous scrolling."""
         if data is None:
-            self.logger.warning("DetailedPlaybackManager: No data provided for display.")
+            self.logger.warning("ModernScreen: No data provided for display.")
             return
 
         base_image = Image.new("RGB", self.display_manager.oled.size, "black")
@@ -171,7 +168,7 @@ class DetailedPlaybackManager(BaseManager):
 
         # Log progress bar data
         self.logger.debug(
-            f"DetailedPlaybackManager: Progress bar data: seek={seek:.2f}s, duration={duration}s, progress={progress:.2%}"
+            f"ModernScreen: Progress bar data: seek={seek:.2f}s, duration={duration}s, progress={progress:.2%}"
         )
 
         screen_width = self.display_manager.oled.width
@@ -182,7 +179,7 @@ class DetailedPlaybackManager(BaseManager):
         # **Calculate Progress Bar Dimensions and Position**
         progress_width = int(screen_width * 0.7)  # 70% of screen width
         progress_x = (screen_width - progress_width) // 2
-        progress_y = margin + 55  # Updated fixed position for progress bar to avoid using `positions` later
+        progress_y = margin + 55  # Fixed position for progress bar to avoid using `positions` later
 
         # **Define Positions for Each Element**
         positions = {
@@ -200,7 +197,7 @@ class DetailedPlaybackManager(BaseManager):
         artist_y = positions["artist"]["y"]
 
         draw.text((artist_x, artist_y), artist_display, font=self.font_artist, fill="white")
-        self.logger.debug(f"DetailedPlaybackManager: Artist displayed at position ({artist_x}, {artist_y}).")
+        self.logger.debug(f"ModernScreen: Artist displayed at position ({artist_x}, {artist_y}).")
 
         # **C. Draw Song Title with Continuous Scrolling**
         title_display, self.scroll_offset_title, title_scrolling = self.update_scroll(
@@ -210,16 +207,16 @@ class DetailedPlaybackManager(BaseManager):
         title_y = positions["title"]["y"] - 2
 
         draw.text((title_x, title_y), title_display, font=self.font_title, fill="white")
-        self.logger.debug(f"DetailedPlaybackManager: Title displayed at position ({title_x}, {title_y}).")
+        self.logger.debug(f"ModernScreen: Title displayed at position ({title_x}, {title_y}).")
 
         # **D. Draw Sample Rate and Bit Depth**
         info_text = f"{samplerate} / {bitdepth}"
         info_width, info_height = self.font_info.getsize(info_text)
         info_x = (screen_width - info_width) // 2
-        info_y = positions["info"]["y"] - 6  # Move 10 pixels up
+        info_y = positions["info"]["y"] - 6  # Move 6 pixels up
         draw.text((info_x, info_y), info_text, font=self.font_info, fill="white")
 
-        self.logger.debug(f"DetailedPlaybackManager: Info displayed at position ({info_x}, {info_y}).")
+        self.logger.debug(f"ModernScreen: Info displayed at position ({info_x}, {info_y}).")
 
         # **E. Draw Volume Icon and Data**
         volume_icon = self.display_manager.icons.get('volume', self.display_manager.default_icon)
@@ -235,7 +232,7 @@ class DetailedPlaybackManager(BaseManager):
         volume_text_x = volume_icon_x + 10
         volume_text_y = volume_icon_y - 2
         draw.text((volume_text_x, volume_text_y), volume_text, font=self.font_info, fill="white")
-        self.logger.debug(f"DetailedPlaybackManager: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}).")
+        self.logger.debug(f"ModernScreen: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}).")
 
         # **F. Draw Progress Bar with Seek and Duration**
         # Draw current time on the left of the progress bar
@@ -272,7 +269,7 @@ class DetailedPlaybackManager(BaseManager):
         # **G. Draw Right-Side Icon Above Duration (Optional)**
         track_type = data.get('trackType', 'default')  # Use 'trackType' from Volumio data, fall back to 'default' if not available
         right_icon = self.display_manager.icons.get(track_type, self.display_manager.default_icon)
-        right_icon = right_icon.resize((16, 16), Image.LANCZOS)  # Resize to 10x10 px
+        right_icon = right_icon.resize((16, 16), Image.LANCZOS)  # Resize to 16x16 px
         right_icon_x = progress_x + progress_width + 15
         right_icon_y = progress_y - 26
         base_image.paste(right_icon, (right_icon_x, right_icon_y))
@@ -280,11 +277,16 @@ class DetailedPlaybackManager(BaseManager):
         # Display final image
         self.display_manager.oled.display(base_image)
         self.logger.info("Updated display with playback details and spectrum visualisation.")
-        
+
     def on_volumio_state_change(self, sender, state):
         """Handle state changes from Volumio."""
-        if not self.is_active or self.mode_manager.screen_manager.get_current_screen() != "detailed_playback":
-            self.logger.debug("DetailedPlaybackManager: Ignoring state change; not active or wrong screen.")
+        """
+        Callback to handle state changes from VolumioListener.
+        Only process state changes when this manager is active and the mode is 'modern_screen'.
+        """
+        # Check if the ModernScreen is active and the mode is correct
+        if not self.is_active or self.mode_manager.get_mode() != "modern_screen":
+            self.logger.debug("ModernScreen: Ignoring state change; not active or wrong mode.")
             return
 
         self.logger.debug(f"State change received: {state}")
@@ -292,11 +294,10 @@ class DetailedPlaybackManager(BaseManager):
             self.latest_state = state
         self.update_event.set()
 
-
     def start_mode(self):
         """Activate detailed playback mode with spectrum visualisation."""
-        if self.mode_manager.screen_manager.get_current_screen() != "detailed_playback":
-            self.logger.warning("Not on the correct screen for detailed playback mode.")
+        if self.mode_manager.get_mode() != "modern_screen":
+            self.logger.warning("ModernScreen: Not on the correct mode for detailed playback mode.")
             return
 
         self.is_active = True
@@ -318,7 +319,7 @@ class DetailedPlaybackManager(BaseManager):
     def stop_mode(self):
         """Deactivate detailed playback mode and stop spectrum visualisation."""
         if not self.is_active:
-            self.logger.info("Already stopped.")
+            self.logger.info("ModernScreen: stop_mode called, but was not active.")
             return
 
         self.is_active = False
@@ -335,8 +336,7 @@ class DetailedPlaybackManager(BaseManager):
             self.update_thread.join(timeout=1)
 
         self.display_manager.clear_screen()
-        self.logger.info("Detailed playback mode stopped and screen cleared.")
-
+        self.logger.info("ModernScreen: Detailed playback mode stopped and screen cleared.")
 
     def display_playback_info(self):
         """Display playback information from the current state."""
@@ -344,4 +344,4 @@ class DetailedPlaybackManager(BaseManager):
         if current_state:
             self.draw_display(current_state)
         else:
-            self.logger.warning("DetailedPlaybackManager: No current state available.")
+            self.logger.warning("ModernScreen: No current state available.")

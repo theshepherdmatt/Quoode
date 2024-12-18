@@ -8,10 +8,9 @@ from .menus.radio_manager import RadioManager
 from .menus.library_manager import LibraryManager
 from .menus.spotify_manager import SpotifyManager
 from .menus.usb_library_manager import USBLibraryManager
-from display.screen_manager import ScreenManager
-from display.screens.radioplayback_manager import RadioPlaybackManager
-from display.screens.detailed_playback_manager import DetailedPlaybackManager
-from display.screens.playback_manager import PlaybackManager
+from display.screens.webradio_screen import WebRadioScreen
+from display.screens.modern_screen import ModernScreen
+from display.screens.original_screen import OriginalScreen
 
 
 class ManagerFactory:
@@ -25,8 +24,8 @@ class ManagerFactory:
         self.logger.info("ManagerFactory initialized.")
 
         # Initialize manager instances as None
-        self.playback_manager = None
-        self.radioplayback_manager = None
+        self.original_screen = None
+        self.webradio_screen = None
         self.menu_manager = None
         self.playlist_manager = None
         self.radio_manager = None
@@ -35,14 +34,14 @@ class ManagerFactory:
         self.spotify_manager = None
         self.library_manager = None
         self.usb_library_manager = None
-        self.detailed_playback_manager = None
-        self.screen_manager = None
+        self.modern_screen = None
+
 
     def setup_mode_manager(self):
         """Set up all parts of the ModeManager."""
         # Create managers
-        self.playback_manager = self.create_playback_manager()
-        self.radioplayback_manager = self.create_radioplayback_manager()
+        self.original_screen = self.create_original_screen()
+        self.webradio_screen = self.create_webradio_screen()
         self.menu_manager = self.create_menu_manager()
         self.playlist_manager = self.create_playlist_manager()
         self.radio_manager = self.create_radio_manager()
@@ -51,11 +50,11 @@ class ManagerFactory:
         self.spotify_manager = self.create_spotify_manager()
         self.library_manager = self.create_library_manager()
         self.usb_library_manager = self.create_usb_library_manager()
-        self.detailed_playback_manager = self.create_detailed_playback_manager()
+        self.modern_screen = self.create_modern_screen()
 
         # Assign the managers to mode_manager
-        self.mode_manager.set_playback_manager(self.playback_manager)
-        self.mode_manager.set_radioplayback_manager(self.radioplayback_manager)
+        self.mode_manager.set_original_screen(self.original_screen)
+        self.mode_manager.set_webradio_screen(self.webradio_screen)
         self.mode_manager.set_menu_manager(self.menu_manager)
         self.mode_manager.set_playlist_manager(self.playlist_manager)
         self.mode_manager.set_radio_manager(self.radio_manager)
@@ -64,11 +63,8 @@ class ManagerFactory:
         self.mode_manager.set_spotify_manager(self.spotify_manager)
         self.mode_manager.set_library_manager(self.library_manager)
         self.mode_manager.set_usb_library_manager(self.usb_library_manager)
-        self.mode_manager.set_detailed_playback_manager(self.detailed_playback_manager)
+        self.mode_manager.set_modern_screen(self.modern_screen)
 
-        # Assign the ScreenManager, using existing playback_manager
-        self.screen_manager = self.create_screen_manager()
-        self.mode_manager.screen_manager = self.screen_manager
 
         self.logger.info("ModeManager fully configured.")
 
@@ -100,15 +96,12 @@ class ManagerFactory:
     def create_usb_library_manager(self):
         return USBLibraryManager(self.display_manager, self.volumio_listener, self.mode_manager)
 
-    def create_screen_manager(self):
-        preference_file_path = self.config.get('screen_preferences_path', "/home/volumio/Quadify/src/screen_preference.json")
-        return ScreenManager(self.playback_manager, self.detailed_playback_manager, preference_file_path)
 
-    def create_radioplayback_manager(self):
-        return RadioPlaybackManager(self.display_manager, self.volumio_listener, self.mode_manager)
+    def create_webradio_screen(self):
+        return WebRadioScreen(self.display_manager, self.volumio_listener, self.mode_manager)
 
-    def create_detailed_playback_manager(self):
-        return DetailedPlaybackManager(self.display_manager, self.volumio_listener, self.mode_manager)
+    def create_modern_screen(self):
+        return ModernScreen(self.display_manager, self.volumio_listener, self.mode_manager)
 
-    def create_playback_manager(self):
-        return PlaybackManager(self.display_manager, self.volumio_listener, self.mode_manager)
+    def create_original_screen(self):
+        return OriginalScreen(self.display_manager, self.volumio_listener, self.mode_manager)

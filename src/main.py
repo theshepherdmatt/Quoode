@@ -11,9 +11,9 @@ from PIL import Image, ImageSequence
 # Importing components from the src directory
 from display.display_manager import DisplayManager
 from display.screens.clock import Clock
-from display.screens.playback_manager import PlaybackManager
-from display.screens.radioplayback_manager import RadioPlaybackManager
-from display.screens.detailed_playback_manager import DetailedPlaybackManager
+from display.screens.original_screen import OriginalScreen
+from display.screens.webradio_screen import WebRadioScreen
+from display.screens.modern_screen import ModernScreen
 from managers.mode_manager import ModeManager
 from managers.menu_manager import MenuManager
 from managers.menus.playlist_manager import PlaylistManager
@@ -27,7 +27,6 @@ from controls.rotary_control import RotaryControl
 from network.volumio_listener import VolumioListener
 from hardware.buttonsleds import ButtonsLEDController
 from handlers.state_handler import StateHandler
-from display.screen_manager import ScreenManager
 from managers.manager_factory import ManagerFactory
 
 
@@ -181,8 +180,9 @@ def main():
     manager_factory.setup_mode_manager()
 
     # Access the managers via factory's attributes
-    playback_manager = manager_factory.playback_manager
-    radioplayback_manager = manager_factory.radioplayback_manager
+    original_screen = manager_factory.original_screen
+    webradio_screen = manager_factory.webradio_screen
+    modern_screen = manager_factory.modern_screen
     menu_manager = manager_factory.menu_manager
     playlist_manager = manager_factory.playlist_manager
     radio_manager = manager_factory.radio_manager
@@ -191,10 +191,6 @@ def main():
     spotify_manager = manager_factory.spotify_manager
     library_manager = manager_factory.library_manager
     usb_library_manager = manager_factory.usb_library_manager
-    screen_manager = manager_factory.screen_manager
-
-    # Log the initialization of the ScreenManager
-    logging.info(f"Main: ScreenManager initialized with current screen: {screen_manager.get_current_screen()}")
 
 
     # 20. Assign mode_manager to volumio_listener
@@ -204,62 +200,70 @@ def main():
     buttons_leds = ButtonsLEDController(volumio_listener=volumio_listener, config_path=config_path)
     buttons_leds.start()
 
-    # 22. Define RotaryControl callbacks
     def on_rotate(direction):
         current_mode = mode_manager.get_mode()
 
-        if current_mode == 'playback':
-            # Adjust volume in PlaybackManager based on direction
+        if current_mode == 'original':
+            # Adjust volume in OriginalScreen based on direction
             volume_change = 10 if direction == 1 else -10
-            playback_manager.adjust_volume(volume_change)
+            original_screen.adjust_volume(volume_change)
+            logger.debug(f"OriginalScreen: Adjusted volume by {volume_change}.")
             
-        if current_mode == 'detailed_playback':
-            # Adjust volume in PlaybackManager based on direction
+        elif current_mode == 'playback':
+            # Adjust volume in Playback mode via OriginalScreen
             volume_change = 10 if direction == 1 else -10
-            detailed_playback_manager.adjust_volume(volume_change)
-            logger.debug(f"PlaybackManager: Adjusted volume in playback mode by direction: {volume_change}")
+            original_screen.adjust_volume(volume_change)
+            logger.debug(f"Playback: Adjusted volume by {volume_change}.")
         
-        elif current_mode == 'radioplayback':
-            # Adjust volume in RadioPlaybackManager based on direction
+        elif current_mode == 'modern':
+            # Adjust volume in ModernScreen based on direction
             volume_change = 10 if direction == 1 else -10
-            radioplayback_manager.adjust_volume(volume_change)  # Assuming `radioplayback_manager` is an instance of `RadioPlaybackManager`
-            logger.debug(f"RadioPlaybackManager: Adjusted volume in radioplayback mode by direction: {volume_change}")
-
+            modern_screen.adjust_volume(volume_change)
+            logger.debug(f"ModernScreen: Adjusted volume by {volume_change}.")
+        
+        elif current_mode == 'webradio':
+            # Adjust volume in WebRadioScreen based on direction
+            volume_change = 10 if direction == 1 else -10
+            webradio_screen.adjust_volume(volume_change)
+            logger.debug(f"WebRadioScreen: Adjusted volume by {volume_change}.")
+        
         elif current_mode == 'menu':
             # Only allow scrolling when explicitly in menu mode, prevent unintended menu activation
             menu_manager.scroll_selection(direction)
             logger.debug(f"Scrolled menu in mode: {current_mode} with direction: {direction}")
-
+        
         elif current_mode == 'tidal':
             tidal_manager.scroll_selection(direction)
             logger.debug(f"Scrolled Tidal menu in mode: {current_mode} with direction: {direction}")
-
+        
         elif current_mode == 'qobuz':
             qobuz_manager.scroll_selection(direction)
             logger.debug(f"Scrolled Qobuz menu in mode: {current_mode} with direction: {direction}")
-
+        
         elif current_mode == 'spotify':
             spotify_manager.scroll_selection(direction)
             logger.debug(f"Scrolled Spotify menu in mode: {current_mode} with direction: {direction}")
-
+        
         elif current_mode == 'playlists':
             playlist_manager.scroll_selection(direction)
             logger.debug(f"Scrolled Playlist menu in mode: {current_mode} with direction: {direction}")
-
-        elif current_mode == 'webradio':
+        
+        elif current_mode == 'radio':
             radio_manager.scroll_selection(direction)
             logger.debug(f"Scrolled Radio menu in mode: {current_mode} with direction: {direction}")
-
+        
         elif current_mode == 'library':
             library_manager.scroll_selection(direction)
             logger.debug(f"Scrolled Library menu in mode: {current_mode} with direction: {direction}")
-
+        
         elif current_mode == 'usblibrary':
             usb_library_manager.scroll_selection(direction)
             logger.debug(f"Scrolled USB Library menu in mode: {current_mode} with direction: {direction}")
-
+        
         else:
             logger.warning(f"Unhandled mode: {current_mode}. No rotary action performed.")
+
+
 
 
     def on_button_press_inner():
@@ -268,50 +272,65 @@ def main():
         if current_mode == 'clock':
             # Switch from clock mode to menu mode
             mode_manager.to_menu()
+            logger.info("ModeManager: Switched to 'menu' mode from 'clock' mode.")
         elif current_mode == 'menu':
             # Select the currently highlighted menu item
             menu_manager.select_item()
-        elif current_mode in ['fm4', 'modern']:
-            # Toggle screens if button pressed in FM4 or Modern mode
-            screen_manager.switch_screen()
-            logger.info(f"Toggled to {screen_manager.get_current_screen()} screen in {current_mode} mode.")
+            logger.debug(f"MenuManager: Selected item in 'menu' mode.")
+        elif current_mode == 'original':
+            # Toggle play/pause in OriginalScreen mode
+            original_screen.toggle_play_pause()
+            logger.debug("OriginalScreen: Toggled play/pause in 'original' mode.")
+        elif current_mode == 'modern':
+            # Toggle play/pause in ModernScreen mode
+            modern_screen.toggle_play_pause()
+            logger.debug("ModernScreen: Toggled play/pause in 'modern' mode.")
+        elif current_mode == 'webradio':
+            # Toggle play/pause in WebRadioScreen mode
+            webradio_screen.toggle_play_pause()
+            logger.debug("WebRadioScreen: Toggled play/pause in 'webradio' mode.")
         elif current_mode == 'playback':
-            # Toggle play/pause in playback mode
-            playback_manager.toggle_play_pause()
+            # Toggle play/pause in Playback mode (if separate)
+            # Assuming 'playback' is managed by OriginalScreen or another manager
+            original_screen.toggle_play_pause()
+            logger.debug("PlaybackManager: Toggled play/pause in 'playback' mode.")
         elif current_mode == 'radioplayback':
-            # Toggle play/pause in radioplayback mode
-            radioplayback_manager.toggle_play_pause()  # Assuming `radioplayback_manager` is an instance of `RadioPlaybackManager`
-            logger.debug("RadioPlaybackManager: Toggled play/pause in radioplayback mode.")
+            # Toggle play/pause in Radioplayback mode (if separate)
+            # Assuming 'radioplayback' is managed by WebRadioScreen or another manager
+            webradio_screen.toggle_play_pause()
+            logger.debug("RadioPlaybackManager: Toggled play/pause in 'radioplayback' mode.")
         elif current_mode == 'tidal':
             # Select the currently highlighted item in the Tidal menu
             tidal_manager.select_item()
-            logger.debug(f"Button pressed in tidal mode: selected item {tidal_manager.current_selection_index}")
+            logger.debug(f"TidalManager: Selected item in 'tidal' mode.")
         elif current_mode == 'qobuz':
             # Select the currently highlighted item in the Qobuz menu
             qobuz_manager.select_item()
-            logger.debug(f"Button pressed in qobuz mode: selected item {qobuz_manager.current_selection_index}")
+            logger.debug(f"QobuzManager: Selected item in 'qobuz' mode.")
         elif current_mode == 'spotify':
             # Select the currently highlighted item in the Spotify menu
             spotify_manager.select_item()
-            logger.debug(f"Button pressed in spotify mode: selected item {spotify_manager.current_selection_index}")
-        elif current_mode == 'webradio':
-            # Handle item selection in Webradio mode
-            radio_manager.select_item()
-            logger.debug(f"Button pressed in webradio mode: selected item {radio_manager.current_selection_index}")
-        elif current_mode == 'library':
-            # Handle item selection in Library mode
-            library_manager.select_item()
-            logger.debug(f"Button pressed in library mode: selected item {library_manager.current_selection_index}")
-        elif current_mode == 'usblibrary':
-            # Handle item selection in Library mode
-            usb_library_manager.select_item()
-            logger.debug(f"Button pressed in usblibrary mode: selected item {usb_library_manager.current_selection_index}")
+            logger.debug(f"SpotifyManager: Selected item in 'spotify' mode.")
         elif current_mode == 'playlists':
-            # Handle item selection in Playlists mode
+            # Select the currently highlighted item in the Playlists menu
             playlist_manager.select_item()
-            logger.debug(f"Button pressed in playlists mode: selected item {playlist_manager.current_selection_index}")
+            logger.debug(f"PlaylistManager: Selected item in 'playlists' mode.")
+        elif current_mode == 'radio':
+            # Select the currently highlighted item in the Radio menu
+            radio_manager.select_item()
+            logger.debug(f"RadioManager: Selected item in 'radio' mode.")
+        elif current_mode == 'library':
+            # Select the currently highlighted item in the Library menu
+            library_manager.select_item()
+            logger.debug(f"LibraryManager: Selected item in 'library' mode.")
+        elif current_mode == 'usblibrary':
+            # Select the currently highlighted item in the USB Library menu
+            usb_library_manager.select_item()
+            logger.debug(f"USBLibraryManager: Selected item in 'usblibrary' mode.")
         else:
             logger.warning(f"Unhandled mode: {current_mode}. No button action performed.")
+
+
 
     def on_long_press():
         logger.info("Long button press detected")
@@ -319,6 +338,8 @@ def main():
         current_mode = mode_manager.get_mode()
         if current_mode != 'clock':
             mode_manager.to_clock()
+            logger.info("ModeManager: Switched to 'clock' mode via long press.")
+
 
     # 23. Initialize RotaryControl
     rotary_control = RotaryControl(

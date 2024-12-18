@@ -353,12 +353,16 @@ class QobuzManager(BaseManager):
 
     def update_song_info(self, state):
         """Update the playback metrics display based on the current state."""
-        self.logger.info("PlaybackManager: Updating playback metrics display.")
+        self.logger.info("QobuzManager: Updating playback metrics display.")
 
         # Extract relevant playback information
         sample_rate = state.get("samplerate", "Unknown Sample Rate")
         bitdepth = state.get("bitdepth", "Unknown Bit Depth")
         volume = state.get("volume", "Unknown Volume")
 
-        # Forward the information to the PlaybackManager to handle without drawing directly here
-        self.mode_manager.playback_manager.update_playback_metrics(state)
+        # Forward the information to the OriginalScreen to handle the playback metrics
+        if self.mode_manager.original_screen:
+            self.mode_manager.original_screen.update_playback_metrics(state)
+            self.logger.debug("QobuzManager: Forwarded playback metrics to OriginalScreen.")
+        else:
+            self.logger.error("QobuzManager: OriginalScreen is not set in ModeManager.")

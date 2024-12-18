@@ -1,4 +1,4 @@
-# src/managers/webradio_manager.py
+# src/managers/webradio_screen.py
 
 from managers.menus.base_manager import BaseManager
 
@@ -9,8 +9,9 @@ import requests
 from io import BytesIO
 import threading
 
-class RadioPlaybackManager(BaseManager):
+class WebRadioScreen(BaseManager):
     def __init__(self, display_manager, volumio_listener, mode_manager):
+        super().__init__(display_manager, volumio_listener, mode_manager)
         self.mode_manager = mode_manager
         self.display_manager = display_manager
         self.volumio_listener = volumio_listener
@@ -37,18 +38,22 @@ class RadioPlaybackManager(BaseManager):
         # Start the background update thread
         self.update_thread = threading.Thread(target=self.update_display_loop, daemon=True)
         self.update_thread.start()
-        self.logger.info("RadioPlaybackManager: Started background update thread.")
+        self.logger.info("WebRadioScreen: Started background update thread.")
 
         # Register a callback for Volumio state changes
         self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
-        self.logger.info("RadioPlaybackManager initialized.")
+        self.logger.info("WebRadioScreen initialized.")
 
     def on_volumio_state_change(self, sender, state):
-        if state.get("service") == "webradio":
-            self.logger.debug(f"RadioPlaybackManager: Received state change for webradio: {state}")
-            with self.state_lock:
-                self.latest_state = state
-            self.update_event.set()
+        """Handle state changes from Volumio."""
+        if state.get("service", "").lower() != "webradio":
+            self.logger.debug("WebRadioScreen: Ignoring state change for non-webradio service.")
+            return
+
+        self.logger.debug(f"WebRadioScreen: Received state change for webradio: {state}")
+        with self.state_lock:
+            self.latest_state = state
+        self.update_event.set()
 
     def update_display_loop(self):
         """
@@ -69,24 +74,32 @@ class RadioPlaybackManager(BaseManager):
                     self.draw_display(state_to_process)
 
     def start_mode(self):
+        """Activate the WebRadioScreen display mode."""
+        if self.mode_manager.get_mode() != "webradio":
+            self.logger.warning("WebRadioScreen: Not in 'webradio' mode. Cannot start WebRadioScreen.")
+            return
+
         if not self.is_active:
             self.is_active = True
-            self.logger.info("RadioPlaybackManager: Starting radioplayback mode.")
+            self.logger.info("WebRadioScreen: Starting WebRadioScreen mode.")
             self.display_radioplayback_info()
         else:
-            self.logger.info("RadioPlaybackManager: start_mode called, but mode is already active.")
+            self.logger.info("WebRadioScreen: start_mode called, but mode is already active.")
 
     def stop_mode(self):
-        """Stop the radioplayback display mode."""
+        """Deactivate the WebRadioScreen display mode."""
         if self.is_active:
             self.is_active = False
             self.stop_event.set()
             self.update_event.set()  # Unblock the update thread if waiting
-            self.update_thread.join()
+            if self.update_thread.is_alive():
+                self.update_thread.join(timeout=1)
+                if self.update_thread.is_alive():
+                    self.logger.warning("WebRadioScreen: Failed to terminate update thread in time.")
             self.display_manager.clear_screen()
-            self.logger.info("RadioPlaybackManager: Stopped playback mode and terminated update thread.")
+            self.logger.info("WebRadioScreen: Stopped WebRadioScreen mode and terminated update thread.")
         else:
-            self.logger.info("RadioPlaybackManager: stop_mode called, but was not active.")
+            self.logger.info("WebRadioScreen: stop_mode called, but was not active.")
 
     def draw_volume_bars(self, draw, volume):
         """
@@ -95,7 +108,7 @@ class RadioPlaybackManager(BaseManager):
         :param volume: Current volume level (0-100).
         """
         if not self.is_active:
-            self.logger.info("RadioPlaybackManager: draw_volume_bars called, but mode is not active.")
+            self.logger.info("WebRadioScreen: draw_volume_bars called, but mode is not active.")
             return
 
         filled_squares = round((volume / 100) * 6)
@@ -108,11 +121,11 @@ class RadioPlaybackManager(BaseManager):
             for row in range(filled_squares):
                 y = self.display_manager.oled.height - padding_bottom - ((row + 1) * (square_size + row_spacing))
                 draw.rectangle([x, y, x + square_size, y + square_size], fill="white")
-        self.logger.info(f"RadioPlaybackManager: Drew volume bars with {filled_squares} filled squares.")
+        self.logger.info(f"WebRadioScreen: Drew volume bars with {filled_squares} filled squares.")
 
     def draw(self, draw, data, base_image):
         if not self.is_active:
-            self.logger.info("RadioPlaybackManager: draw called, but mode is not active.")
+            self.logger.info("WebRadioScreen: draw called, but mode is not active.")
             return
 
         # Determine which station information to display
@@ -139,7 +152,7 @@ class RadioPlaybackManager(BaseManager):
         # Draw the station name or artist at the calculated position
         font_display_text = self.display_manager.fonts.get('radio_title', ImageFont.load_default())
         draw.text((self.display_manager.oled.width // 2, webradio_y_position), 
-                display_text, font=font_display_text, fill="white", anchor="mm")
+                  display_text, font=font_display_text, fill="white", anchor="mm")
 
         # Display bitrate if available
         if bitrate:
@@ -152,9 +165,9 @@ class RadioPlaybackManager(BaseManager):
 
         if album_art_url:
             try:
-                response = requests.get(album_art_url)
+                response = requests.get(album_art_url, timeout=5)
                 # Check if response contains image data
-                if response.headers["Content-Type"].startswith("image"):
+                if response.headers.get("Content-Type", "").startswith("image"):
                     album_art = Image.open(BytesIO(response.content)).resize((40, 40)).convert("RGBA")
                     
                     # Handle transparency if the album art is in RGBA mode
@@ -179,6 +192,9 @@ class RadioPlaybackManager(BaseManager):
             album_art_x = self.display_manager.oled.width - album_art.width - 5
             album_art_y = 10
             base_image.paste(album_art, (album_art_x, album_art_y))
+            self.logger.info(f"WebRadioScreen: Pasted album art at position ({album_art_x}, {album_art_y}).")
+        else:
+            self.logger.warning("WebRadioScreen: No album art available to display.")
 
         # Draw volume bars
         volume = max(0, min(int(data.get("volume", 0)), 100))
@@ -187,7 +203,7 @@ class RadioPlaybackManager(BaseManager):
     def draw_display(self, data):
         """Draw the display based on the Volumio state."""
         if not self.is_active:
-            self.logger.info("RadioPlaybackManager: draw_display called, but mode is not active.")
+            self.logger.info("WebRadioScreen: draw_display called, but mode is not active.")
             return
 
         # Create an image to draw on
@@ -199,16 +215,16 @@ class RadioPlaybackManager(BaseManager):
 
         # Display the final composed image
         self.display_manager.oled.display(base_image)
-        self.logger.info("RadioPlaybackManager: Display updated.")
+        self.logger.info("WebRadioScreen: Display updated.")
 
     def display_radioplayback_info(self):
         """Display the radioplayback information on the OLED."""
         if not self.is_active:
-            self.logger.info("RadioPlaybackManager: display_radioplayback_info called, but mode is not active.")
+            self.logger.info("WebRadioScreen: display_radioplayback_info called, but mode is not active.")
             return
         
         current_state = self.volumio_listener.get_current_state()
         if current_state:
             self.draw_display(current_state)
         else:
-            self.logger.warning("RadioPlaybackManager: No current state available to display.")
+            self.logger.warning("WebRadioScreen: No current state available to display.")

@@ -1,4 +1,4 @@
-# src/managers/playback_manager.py
+# src/managers/original_screen.py
 
 from managers.menus.base_manager import BaseManager
 import logging
@@ -12,7 +12,7 @@ import time
 import re
 
 
-class PlaybackManager(BaseManager):
+class OriginalScreen(BaseManager):
     def __init__(self, display_manager, volumio_listener, mode_manager):
         super().__init__(display_manager, volumio_listener, mode_manager)
         self.mode_manager = mode_manager  # Ensure this is set
@@ -30,38 +30,38 @@ class PlaybackManager(BaseManager):
         # Start the background update thread
         self.update_thread = threading.Thread(target=self.update_display_loop, daemon=True)
         self.update_thread.start()
-        self.logger.info("PlaybackManager: Started background update thread.")
+        self.logger.info("OriginalScreen: Started background update thread.")
 
         # Register a callback for Volumio state changes
         self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
-        self.logger.info("PlaybackManager initialized.")
+        self.logger.info("OriginalScreen initialized.")
         
     
     def on_volumio_state_change(self, sender, state):
         """
         Callback to handle state changes from VolumioListener.
-        Only process state changes when this manager is active and the screen is set to 'playback'.
+        Only process state changes when this manager is active and the mode is 'playback'.
         """
-        # Check if the PlaybackManager is active and the screen is correct
-        if not self.is_active or self.mode_manager.screen_manager.get_current_screen() != "playback":
-            self.logger.debug("PlaybackManager: Ignoring state change since it is not active or the current screen is not 'playback'.")
+        # Check if the OriginalScreen is active and the mode is 'playback'
+        if not self.is_active or self.mode_manager.get_mode() != "playback":
+            self.logger.debug("OriginalScreen: Ignoring state change since it is not active or the current mode is not 'playback'.")
             return
 
-        # Check if the service is webradio, and ignore it in PlaybackManager
-        if state.get("service") == "webradio":
-            self.logger.debug("PlaybackManager: Ignoring state change for webradio service.")
+        # Check if the service is webradio, and ignore it in OriginalScreen
+        if state.get("service", "").lower() == "webradio":
+            self.logger.debug("OriginalScreen: Ignoring state change for webradio service.")
             return
 
         # Only suppress state changes during specific operations
         if self.mode_manager and self.mode_manager.is_state_change_suppressed():
-            self.logger.debug("PlaybackManager: State change suppressed, not updating display.")
+            self.logger.debug("OriginalScreen: State change suppressed, not updating display.")
             return
 
-        self.logger.debug(f"PlaybackManager: Received state change from {sender}: {state}")
+        self.logger.debug(f"OriginalScreen: Received state change from {sender}: {state}")
         with self.state_lock:
             self.latest_state = state
         self.update_event.set()
-        self.logger.debug("PlaybackManager: Signaled update thread with new state.")
+        self.logger.debug("OriginalScreen: Signaled update thread with new state.")
 
 
     def update_display_loop(self):
@@ -79,15 +79,15 @@ class PlaybackManager(BaseManager):
 
                 self.update_event.clear()
 
-                # Only update display if active and on the correct screen
-                if self.is_active and self.mode_manager.screen_manager.get_current_screen() == "playback":
+                # Only update display if active and in 'playback' mode
+                if self.is_active and self.mode_manager.get_mode() == "playback":
                     if state_to_process:
                         if self.mode_manager and self.mode_manager.is_state_change_suppressed():
-                            self.logger.debug("PlaybackManager: State change suppressed during update loop, not updating display.")
+                            self.logger.debug("OriginalScreen: State change suppressed during update loop, not updating display.")
                             continue
                         self.draw_display(state_to_process)
                 else:
-                    self.logger.debug("PlaybackManager: Skipping display update as it is inactive or on a different screen.")
+                    self.logger.debug("OriginalScreen: Skipping display update as it is inactive or not in 'playback' mode.")
 
 
 
@@ -100,7 +100,7 @@ class PlaybackManager(BaseManager):
         """
         # Ensure `self.latest_state` is not None
         if self.latest_state is None:
-            self.logger.warning("[PlaybackManager] latest_state is None, initializing with default volume of 100.")
+            self.logger.warning("[OriginalScreen] latest_state is None, initializing with default volume of 100.")
             self.latest_state = {"volume": 100}
 
         # Adjust volume using current state
@@ -108,24 +108,24 @@ class PlaybackManager(BaseManager):
             current_volume = self.latest_state.get("volume", 100)  # Default to 100 if volume is not set
             new_volume = max(0, min(int(current_volume) + volume_change, 100))
 
-        self.logger.info(f"PlaybackManager: Adjusting volume from {current_volume} to {new_volume}.")
+        self.logger.info(f"OriginalScreen: Adjusting volume from {current_volume} to {new_volume}.")
 
         try:
             if volume_change > 0:
                 # Emit a volume increase command using '+'
                 self.volumio_listener.socketIO.emit("volume", "+")
-                self.logger.info(f"PlaybackManager: Emitted volume increase command.")
+                self.logger.info(f"OriginalScreen: Emitted volume increase command.")
             elif volume_change < 0:
                 # Emit a volume decrease command using '-'
                 self.volumio_listener.socketIO.emit("volume", "-")
-                self.logger.info(f"PlaybackManager: Emitted volume decrease command.")
+                self.logger.info(f"OriginalScreen: Emitted volume decrease command.")
             else:
                 # If volume_change is zero, emit the direct volume level
                 self.volumio_listener.socketIO.emit("volume", new_volume)
-                self.logger.info(f"PlaybackManager: Emitted volume set command with value {new_volume}.")
+                self.logger.info(f"OriginalScreen: Emitted volume set command with value {new_volume}.")
 
         except Exception as e:
-            self.logger.error(f"PlaybackManager: Failed to adjust volume - {e}")
+            self.logger.error(f"OriginalScreen: Failed to adjust volume - {e}")
 
     def display_playback_info(self):
         """Initialize playback display based on the current state."""
@@ -133,7 +133,7 @@ class PlaybackManager(BaseManager):
         if current_state:
             self.draw_display(current_state)
         else:
-            self.logger.warning("PlaybackManager: No current state available to display.")
+            self.logger.warning("OriginalScreen: No current state available to display.")
 
     def draw_display(self, data):
         """Draw the display based on the Volumio state."""
@@ -155,12 +155,12 @@ class PlaybackManager(BaseManager):
         # Handle paused or stopped states
         if status in ["pause", "stop"] and not current_service:
             current_service = self.previous_service or "default"
-            self.logger.debug(f"PlaybackManager: Player is {status}. Using previous service '{current_service}'.")
+            self.logger.debug(f"OriginalScreen: Player is {status}. Using previous service '{current_service}'.")
         else:
             if current_service:
                 if current_service != self.previous_service:
                     self.display_manager.clear_screen()
-                    self.logger.info(f"PlaybackManager: Service changed to '{current_service}'. Screen cleared.")
+                    self.logger.info(f"OriginalScreen: Service changed to '{current_service}'. Screen cleared.")
                 self.previous_service = current_service
             else:
                 current_service = self.previous_service or "default"
@@ -181,16 +181,16 @@ class PlaybackManager(BaseManager):
             for row in range(filled_squares):
                 y = self.display_manager.oled.height - padding_bottom - ((row + 1) * (square_size + row_spacing))
                 draw.rectangle([x, y, x + square_size, y + square_size], fill="white")
-        self.logger.info(f"PlaybackManager: Drew volume bars with {filled_squares} filled squares.")
+        self.logger.info(f"OriginalScreen: Drew volume bars with {filled_squares} filled squares.")
 
         # Handle general playback drawing
         self.draw_general_playback(draw, base_image, data, current_service)
 
         # Display the final composed image
         self.display_manager.oled.display(base_image)
-        self.logger.info("PlaybackManager: Display updated.")
+        self.logger.info("OriginalScreen: Display updated.")
 
-    
+
     def draw_general_playback(self, draw, base_image, data, current_service):
         """
         Draws the general playback information (sample rate, service icon, audio type, bitdepth).
@@ -215,7 +215,7 @@ class PlaybackManager(BaseManager):
             else:
                 raise ValueError("Empty samplerate string")
         except (ValueError, IndexError) as e:
-            self.logger.warning(f"PlaybackManager: Failed to parse sample rate: '{sample_rate}' - Error: {e}")
+            self.logger.warning(f"OriginalScreen: Failed to parse sample rate: '{sample_rate}' - Error: {e}")
             sample_rate_num = "N/A"
             sample_rate_unit_text = ""
 
@@ -264,7 +264,7 @@ class PlaybackManager(BaseManager):
             anchor="lm"  # Left aligned
         )
 
-        self.logger.info("PlaybackManager: Drew sample rate.")
+        self.logger.info("OriginalScreen: Drew sample rate.")
 
         # Draw Service Icon
         icon = self.display_manager.icons.get(current_service)
@@ -284,7 +284,7 @@ class PlaybackManager(BaseManager):
 
             # Paste the icon
             base_image.paste(icon, (icon_x, icon_y))
-            self.logger.info(f"PlaybackManager: Pasted icon for '{current_service}' at position ({icon_x}, {icon_y}).")
+            self.logger.info(f"OriginalScreen: Pasted icon for '{current_service}' at position ({icon_x}, {icon_y}).")
         else:
             # Fallback to default icon if specific icon is not found
             icon = self.display_manager.default_icon
@@ -297,9 +297,9 @@ class PlaybackManager(BaseManager):
                 icon_x = self.display_manager.oled.width - icon.width - 20
                 icon_y = 5
                 base_image.paste(icon, (icon_x, icon_y))
-                self.logger.info(f"PlaybackManager: Pasted default icon at position ({icon_x}, {icon_y}).")
+                self.logger.info(f"OriginalScreen: Pasted default icon at position ({icon_x}, {icon_y}).")
             else:
-                self.logger.warning("PlaybackManager: No default icon available.")
+                self.logger.warning("OriginalScreen: No default icon available.")
 
         # Draw Bit Depth
         bitdepth = data.get("bitdepth", "N/A")
@@ -320,34 +320,26 @@ class PlaybackManager(BaseManager):
             anchor="rm"  # Right-aligned
         )
 
-        self.logger.info("PlaybackManager: Drew audio format and bitdepth.")
-
-    def display_playback_info(self):
-        """Initialize playback display based on the current state."""
-        current_state = self.volumio_listener.get_current_state()
-        if current_state:
-            self.draw_display(current_state)
-        else:
-            self.logger.warning("PlaybackManager: No current state available to display.")
+        self.logger.info("OriginalScreen: Drew audio format and bitdepth.")
 
     def start_mode(self):
         """
-        Activate the PlaybackManager and initialize the playback display.
+        Activate the OriginalScreen and initialize the playback display.
         """
-        if self.mode_manager.screen_manager.get_current_screen() != "playback":
-            self.logger.warning("PlaybackManager: Attempted to start, but the current screen is not 'playback'.")
+        if self.mode_manager.get_mode() != "playback":
+            self.logger.warning("OriginalScreen: Attempted to start, but the current mode is not 'playback'.")
             return
 
         self.is_active = True
-        self.logger.info("PlaybackManager: Starting playback mode.")
+        self.logger.info("OriginalScreen: Starting playback mode.")
         self.display_playback_info()
 
     def stop_mode(self):
         """
-        Deactivate the PlaybackManager and stop the playback display.
+        Deactivate the OriginalScreen and stop the playback display.
         """
         if not self.is_active:
-            self.logger.info("PlaybackManager: stop_mode called, but was not active.")
+            self.logger.info("OriginalScreen: stop_mode called, but was not active.")
             return
 
         self.is_active = False
@@ -358,33 +350,33 @@ class PlaybackManager(BaseManager):
             if self.update_thread.is_alive():
                 self.update_thread.join(timeout=1)
                 if self.update_thread.is_alive():
-                    self.logger.warning("PlaybackManager: Failed to terminate update thread in time.")
+                    self.logger.warning("OriginalScreen: Failed to terminate update thread in time.")
         except Exception as e:
-            self.logger.error(f"PlaybackManager: Error stopping update thread - {e}")
+            self.logger.error(f"OriginalScreen: Error stopping update thread - {e}")
 
         self.display_manager.clear_screen()
-        self.logger.info("PlaybackManager: Stopped playback mode and cleared the screen.")
+        self.logger.info("OriginalScreen: Stopped playback mode and cleared the screen.")
 
 
     def toggle_play_pause(self):
         """Emit the play/pause command to Volumio."""
-        self.logger.info("PlaybackManager: Toggling play/pause.")
+        self.logger.info("OriginalScreen: Toggling play/pause.")
         if not self.volumio_listener.is_connected():
-            self.logger.warning("PlaybackManager: Cannot toggle playback - not connected to Volumio.")
+            self.logger.warning("OriginalScreen: Cannot toggle playback - not connected to Volumio.")
             self.display_error_message("Connection Error", "Not connected to Volumio.")
             return
         
         try:
             self.volumio_listener.socketIO.emit("toggle", {})
-            self.logger.debug("PlaybackManager: 'toggle' event emitted successfully.")
+            self.logger.debug("OriginalScreen: 'toggle' event emitted successfully.")
         except Exception as e:
-            self.logger.error(f"PlaybackManager: Failed to emit 'toggle' event - {e}")
+            self.logger.error(f"OriginalScreen: Failed to emit 'toggle' event - {e}")
             self.display_error_message("Playback Error", f"Could not toggle playback: {e}")
 
 
     def update_playback_metrics(self, state):
         """Update the playback metrics (sample rate, bit depth, and volume) on the display."""
-        self.logger.info("PlaybackManager: Updating playback metrics display.")
+        self.logger.info("OriginalScreen: Updating playback metrics display.")
 
         # Extract relevant playback information
         sample_rate = state.get("samplerate", "Unknown Sample Rate")
@@ -399,4 +391,4 @@ class PlaybackManager(BaseManager):
         # Set the update event to refresh the display in the background loop
         self.update_event.set()
 
-        self.logger.info(f"PlaybackManager: Updated metrics - Sample Rate: {sample_rate}, Bit Depth: {bitdepth}, Volume: {volume}")
+        self.logger.info(f"OriginalScreen: Updated metrics - Sample Rate: {sample_rate}, Bit Depth: {bitdepth}, Volume: {volume}")

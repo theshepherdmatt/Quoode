@@ -238,3 +238,19 @@ class USBLibraryManager(BaseManager):
             )
 
         self.display_manager.draw_custom(draw)
+
+    def update_song_info(self, state):
+        """Update the playback metrics display based on the current state."""
+        self.logger.info("USBLibraryManager: Updating playback metrics display.")
+
+        # Extract relevant playback information
+        sample_rate = state.get("samplerate", "Unknown Sample Rate")
+        bitdepth = state.get("bitdepth", "Unknown Bit Depth")
+        volume = state.get("volume", "Unknown Volume")
+
+        # Forward the information to the OriginalScreen to handle the playback metrics
+        if self.mode_manager.original_screen:
+            self.mode_manager.original_screen.update_playback_metrics(state)
+            self.logger.debug("USBLibraryManager: Forwarded playback metrics to OriginalScreen.")
+        else:
+            self.logger.error("USBLibraryManager: OriginalScreen is not set in ModeManager.")
