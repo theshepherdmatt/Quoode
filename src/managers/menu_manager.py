@@ -233,6 +233,7 @@ class MenuManager:
             self.current_selection_index = 0
             self.window_start_index = 0
             self.display_menu()
+
         if selected_item == "Original":
             # Set the current display mode
             self.mode_manager.set_display_mode('original')
@@ -240,7 +241,7 @@ class MenuManager:
             self.mode_manager.to_original()
             self.logger.info("MenuManager: Switching display mode to Original.")
             # Return to menu if desired, or just stay here
-            self.mode_manager.to_menu()
+            self.mode_manager.to_clock()
 
         elif selected_item == "Modern":
             # Set the current display mode
@@ -249,7 +250,7 @@ class MenuManager:
             self.mode_manager.to_modern()
             self.logger.info("MenuManager: Switching display mode to Modern.")
             # Return to menu if desired
-            self.mode_manager.to_menu()
+            self.mode_manager.to_clock()
             
         elif selected_item == "NAS":
             self.mode_manager.to_library(start_uri="music-library/NAS")
