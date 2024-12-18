@@ -11,7 +11,6 @@ import threading
 import time
 import re
 
-
 class OriginalScreen(BaseManager):
     def __init__(self, display_manager, volumio_listener, mode_manager):
         super().__init__(display_manager, volumio_listener, mode_manager)
@@ -35,16 +34,14 @@ class OriginalScreen(BaseManager):
         # Register a callback for Volumio state changes
         self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
         self.logger.info("OriginalScreen initialized.")
-        
-    
+
     def on_volumio_state_change(self, sender, state):
         """
         Callback to handle state changes from VolumioListener.
-        Only process state changes when this manager is active and the mode is 'playback'.
+        Only process state changes when this manager is active and the mode is 'original'.
         """
-        # Check if the OriginalScreen is active and the mode is 'playback'
-        if not self.is_active or self.mode_manager.get_mode() != "playback":
-            self.logger.debug("OriginalScreen: Ignoring state change since it is not active or the current mode is not 'playback'.")
+        if not self.is_active or self.mode_manager.get_mode() != "original":
+            self.logger.debug("OriginalScreen: Ignoring state change since not active or not in 'original' mode.")
             return
 
         # Check if the service is webradio, and ignore it in OriginalScreen
@@ -63,67 +60,54 @@ class OriginalScreen(BaseManager):
         self.update_event.set()
         self.logger.debug("OriginalScreen: Signaled update thread with new state.")
 
-
     def update_display_loop(self):
         """
         Background thread loop that waits for state changes and updates the display at a controlled rate.
         """
         while not self.stop_event.is_set():
-            # Wait for an update signal or timeout after 0.1 seconds
             triggered = self.update_event.wait(timeout=0.1)
 
             if triggered:
                 with self.state_lock:
                     state_to_process = self.latest_state
-                    self.latest_state = None  # Reset the latest_state
+                    self.latest_state = None
 
                 self.update_event.clear()
 
-                # Only update display if active and in 'playback' mode
-                if self.is_active and self.mode_manager.get_mode() == "playback":
+                # Only update display if active and in 'original' mode
+                if self.is_active and self.mode_manager.get_mode() == "original":
                     if state_to_process:
                         if self.mode_manager and self.mode_manager.is_state_change_suppressed():
                             self.logger.debug("OriginalScreen: State change suppressed during update loop, not updating display.")
                             continue
                         self.draw_display(state_to_process)
                 else:
-                    self.logger.debug("OriginalScreen: Skipping display update as it is inactive or not in 'playback' mode.")
-
-
+                    self.logger.debug("OriginalScreen: Skipping display update as it is inactive or not in 'original' mode.")
 
     def adjust_volume(self, volume_change):
         """
-        Adjusts the volume based on the volume_change parameter.
-
-        :param volume_change: Integer representing the change in volume.
-                              Positive values increase volume, negative values decrease it.
+        Adjust the volume based on the volume_change parameter.
         """
-        # Ensure `self.latest_state` is not None
         if self.latest_state is None:
             self.logger.warning("[OriginalScreen] latest_state is None, initializing with default volume of 100.")
             self.latest_state = {"volume": 100}
 
-        # Adjust volume using current state
         with self.state_lock:
-            current_volume = self.latest_state.get("volume", 100)  # Default to 100 if volume is not set
+            current_volume = self.latest_state.get("volume", 100)
             new_volume = max(0, min(int(current_volume) + volume_change, 100))
 
         self.logger.info(f"OriginalScreen: Adjusting volume from {current_volume} to {new_volume}.")
 
         try:
             if volume_change > 0:
-                # Emit a volume increase command using '+'
                 self.volumio_listener.socketIO.emit("volume", "+")
-                self.logger.info(f"OriginalScreen: Emitted volume increase command.")
+                self.logger.info("OriginalScreen: Emitted volume increase command.")
             elif volume_change < 0:
-                # Emit a volume decrease command using '-'
                 self.volumio_listener.socketIO.emit("volume", "-")
-                self.logger.info(f"OriginalScreen: Emitted volume decrease command.")
+                self.logger.info("OriginalScreen: Emitted volume decrease command.")
             else:
-                # If volume_change is zero, emit the direct volume level
                 self.volumio_listener.socketIO.emit("volume", new_volume)
                 self.logger.info(f"OriginalScreen: Emitted volume set command with value {new_volume}.")
-
         except Exception as e:
             self.logger.error(f"OriginalScreen: Failed to adjust volume - {e}")
 
@@ -137,22 +121,18 @@ class OriginalScreen(BaseManager):
 
     def draw_display(self, data):
         """Draw the display based on the Volumio state."""
-        # Retrieve necessary fields from data
         track_type = data.get("trackType", "").lower()
         service = data.get("service", "").lower()
         status = data.get("status", "").lower()
 
-        # Determine current_service based on conditions
+        # Determine current_service
         if service == "mpd":
-            # When service is 'mpd', set current_service to 'mpd'
             current_service = "mpd"
         else:
-            # For other services, use 'trackType' if available, else use 'service'
             current_service = track_type or service or "default"
 
         self.logger.debug(f"Current service: '{current_service}'")
 
-        # Handle paused or stopped states
         if status in ["pause", "stop"] and not current_service:
             current_service = self.previous_service or "default"
             self.logger.debug(f"OriginalScreen: Player is {status}. Using previous service '{current_service}'.")
@@ -165,7 +145,6 @@ class OriginalScreen(BaseManager):
             else:
                 current_service = self.previous_service or "default"
 
-        # Create an image to draw on
         base_image = Image.new("RGB", self.display_manager.oled.size, "black")
         draw = ImageDraw.Draw(base_image)
 
@@ -174,8 +153,8 @@ class OriginalScreen(BaseManager):
         filled_squares = round((volume / 100) * 6)
         square_size = 3
         row_spacing = 5
-        padding_bottom = 6  # Adjust as needed
-        columns = [10, 26]  # X positions for two columns
+        padding_bottom = 6
+        columns = [10, 26]
 
         for x in columns:
             for row in range(filled_squares):
@@ -183,29 +162,19 @@ class OriginalScreen(BaseManager):
                 draw.rectangle([x, y, x + square_size, y + square_size], fill="white")
         self.logger.info(f"OriginalScreen: Drew volume bars with {filled_squares} filled squares.")
 
-        # Handle general playback drawing
         self.draw_general_playback(draw, base_image, data, current_service)
 
-        # Display the final composed image
         self.display_manager.oled.display(base_image)
         self.logger.info("OriginalScreen: Display updated.")
 
-
     def draw_general_playback(self, draw, base_image, data, current_service):
-        """
-        Draws the general playback information (sample rate, service icon, audio type, bitdepth).
-        """
-        import re  # Import re at the top of the file if not already imported
-
-        # Draw Sample Rate with 'kHz' or 'kbps' in separate fonts
-        sample_rate = data.get("samplerate", "")
+        samplerate = data.get("samplerate", "")
         self.logger.debug(f"Received data: {data}")
 
-        # Extract the numeric value and unit from the sample rate string
+        # Parse sample rate
         try:
-            if sample_rate:
-                # Use regex to extract number and unit
-                match = re.match(r"([\d\.]+)\s*(\w+)", sample_rate)
+            if samplerate:
+                match = re.match(r"([\d\.]+)\s*(\w+)", samplerate)
                 if match:
                     sample_rate_value = float(match.group(1))
                     sample_rate_unit_text = match.group(2).lower()
@@ -215,85 +184,58 @@ class OriginalScreen(BaseManager):
             else:
                 raise ValueError("Empty samplerate string")
         except (ValueError, IndexError) as e:
-            self.logger.warning(f"OriginalScreen: Failed to parse sample rate: '{sample_rate}' - Error: {e}")
+            self.logger.warning(f"OriginalScreen: Failed to parse sample rate: '{samplerate}' - Error: {e}")
             sample_rate_num = "N/A"
             sample_rate_unit_text = ""
 
-        # Normalize unit text
+        # Normalize the unit text
         if sample_rate_unit_text in ["khz", "hz"]:
             sample_rate_unit_text = sample_rate_unit_text.upper()
         elif sample_rate_unit_text == "kbps":
             sample_rate_unit_text = "kbps"
         else:
-            sample_rate_unit_text = "kHz"  # Default to 'kHz' if unit is unexpected
+            sample_rate_unit_text = "kHz"  # default fallback
 
-        # Prepare the sample rate number text
         sample_rate_num_text = str(sample_rate_num)
-
-        # Adjust the fonts
         font_sample_num = self.display_manager.fonts.get('sample_rate', ImageFont.load_default())
         font_sample_unit = self.display_manager.fonts.get('sample_rate_khz', ImageFont.load_default())
 
-        # Define the overall rightmost fixed position for the sample rate block
-        sample_rate_block_right_x = self.display_manager.oled.width - 70  # Adjust as needed
-        sample_rate_y = 32  # Y-position for the text
+        sample_rate_block_right_x = self.display_manager.oled.width - 70
+        sample_rate_y = 32
 
-        # Calculate the width of the numeric part and the unit part
         num_width, _ = draw.textsize(sample_rate_num_text, font=font_sample_num)
         unit_width, _ = draw.textsize(sample_rate_unit_text, font=font_sample_unit)
 
-        # Calculate the starting x-position for the numeric part
-        sample_rate_num_x = sample_rate_block_right_x - unit_width - num_width - 4  # Leave a small gap
+        sample_rate_num_x = sample_rate_block_right_x - unit_width - num_width - 4
+        draw.text((sample_rate_num_x, sample_rate_y), sample_rate_num_text, font=font_sample_num, fill="white", anchor="lm")
 
-        # Draw the numeric part of the sample rate
-        draw.text(
-            (sample_rate_num_x, sample_rate_y),
-            sample_rate_num_text,
-            font=font_sample_num,
-            fill="white",
-            anchor="lm"  # Left aligned for drawing
-        )
-
-        # Draw the unit part immediately next to the numeric value
-        unit_x = sample_rate_num_x + num_width + 1  # Small gap between number and unit
-        draw.text(
-            (unit_x, sample_rate_y + 18),  # Y-position adjustment if needed
-            sample_rate_unit_text,
-            font=font_sample_unit,
-            fill="white",
-            anchor="lm"  # Left aligned
-        )
+        unit_x = sample_rate_num_x + num_width + 1
+        draw.text((unit_x, sample_rate_y + 18), sample_rate_unit_text, font=font_sample_unit, fill="white", anchor="lm")
 
         self.logger.info("OriginalScreen: Drew sample rate.")
 
-        # Draw Service Icon
+        # Draw service icon
         icon = self.display_manager.icons.get(current_service)
         if icon:
-            # If the icon is in RGBA mode, convert it to RGB
             if icon.mode == "RGBA":
                 background = Image.new("RGB", icon.size, (0, 0, 0))
                 background.paste(icon, mask=icon.split()[3])
                 icon = background
 
-            # Calculate positions for the icon
-            icon_padding_right = 12  # Adjust as needed
-            icon_padding_top = 6     # Adjust as needed
-
+            icon_padding_right = 12
+            icon_padding_top = 6
             icon_x = self.display_manager.oled.width - icon.width - icon_padding_right
             icon_y = icon_padding_top
-
-            # Paste the icon
             base_image.paste(icon, (icon_x, icon_y))
             self.logger.info(f"OriginalScreen: Pasted icon for '{current_service}' at position ({icon_x}, {icon_y}).")
         else:
-            # Fallback to default icon if specific icon is not found
+            # Fallback to default icon if none is found
             icon = self.display_manager.default_icon
             if icon:
                 if icon.mode == "RGBA":
                     background = Image.new("RGB", icon.size, (0, 0, 0))
                     background.paste(icon, mask=icon.split()[3])
                     icon = background
-
                 icon_x = self.display_manager.oled.width - icon.width - 20
                 icon_y = 5
                 base_image.paste(icon, (icon_x, icon_y))
@@ -304,34 +246,22 @@ class OriginalScreen(BaseManager):
         # Draw Bit Depth
         bitdepth = data.get("bitdepth", "N/A")
         format_bitdepth_text = f"{bitdepth}"
-
-        # Font information
         font_info = self.display_manager.fonts.get('playback_small', ImageFont.load_default())
-
-        # Calculate x-coordinate for right alignment
-        padding = 15  # Space from the right edge
+        padding = 15
         x_position = self.display_manager.oled.width - padding
-
-        draw.text(
-            (x_position, 50),  # Adjust y-position as needed
-            format_bitdepth_text,
-            font=font_info,
-            fill="white",
-            anchor="rm"  # Right-aligned
-        )
-
+        draw.text((x_position, 50), format_bitdepth_text, font=font_info, fill="white", anchor="rm")
         self.logger.info("OriginalScreen: Drew audio format and bitdepth.")
 
     def start_mode(self):
         """
         Activate the OriginalScreen and initialize the playback display.
         """
-        if self.mode_manager.get_mode() != "playback":
-            self.logger.warning("OriginalScreen: Attempted to start, but the current mode is not 'playback'.")
+        if self.mode_manager.get_mode() != "original":
+            self.logger.warning("OriginalScreen: Attempted to start, but the current mode is not 'original'.")
             return
 
         self.is_active = True
-        self.logger.info("OriginalScreen: Starting playback mode.")
+        self.logger.info("OriginalScreen: Starting playback display for 'original' mode.")
         self.display_playback_info()
 
     def stop_mode(self):
@@ -344,7 +274,7 @@ class OriginalScreen(BaseManager):
 
         self.is_active = False
         self.stop_event.set()
-        self.update_event.set()  # Unblock the update thread if waiting
+        self.update_event.set()
 
         try:
             if self.update_thread.is_alive():
@@ -355,8 +285,7 @@ class OriginalScreen(BaseManager):
             self.logger.error(f"OriginalScreen: Error stopping update thread - {e}")
 
         self.display_manager.clear_screen()
-        self.logger.info("OriginalScreen: Stopped playback mode and cleared the screen.")
-
+        self.logger.info("OriginalScreen: Stopped playback display and cleared the screen.")
 
     def toggle_play_pause(self):
         """Emit the play/pause command to Volumio."""
@@ -365,7 +294,7 @@ class OriginalScreen(BaseManager):
             self.logger.warning("OriginalScreen: Cannot toggle playback - not connected to Volumio.")
             self.display_error_message("Connection Error", "Not connected to Volumio.")
             return
-        
+
         try:
             self.volumio_listener.socketIO.emit("toggle", {})
             self.logger.debug("OriginalScreen: 'toggle' event emitted successfully.")
@@ -373,22 +302,18 @@ class OriginalScreen(BaseManager):
             self.logger.error(f"OriginalScreen: Failed to emit 'toggle' event - {e}")
             self.display_error_message("Playback Error", f"Could not toggle playback: {e}")
 
-
     def update_playback_metrics(self, state):
         """Update the playback metrics (sample rate, bit depth, and volume) on the display."""
         self.logger.info("OriginalScreen: Updating playback metrics display.")
 
-        # Extract relevant playback information
         sample_rate = state.get("samplerate", "Unknown Sample Rate")
         bitdepth = state.get("bitdepth", "Unknown Bit Depth")
         volume = state.get("volume", "Unknown Volume")
 
-        # Update internal state variables or trigger a refresh of the display to reflect changes
+        # Update internal state variables or trigger a refresh of the display
         self.latest_sample_rate = sample_rate
         self.latest_bitdepth = bitdepth
         self.latest_volume = volume
 
-        # Set the update event to refresh the display in the background loop
         self.update_event.set()
-
         self.logger.info(f"OriginalScreen: Updated metrics - Sample Rate: {sample_rate}, Bit Depth: {bitdepth}, Volume: {volume}")

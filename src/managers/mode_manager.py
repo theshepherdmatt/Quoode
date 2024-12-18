@@ -3,6 +3,8 @@
 import logging
 from transitions import Machine
 import threading
+import os
+import json
 
 class ModeManager:
     states = [
@@ -25,11 +27,21 @@ class ModeManager:
         self,
         display_manager,
         clock,
-        volumio_listener
+        volumio_listener,
+        preference_file_path="screen_preference.json"
     ):
+        # Initialize logger FIRST
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.DEBUG)  # Set to DEBUG level for detailed logs
+        self.logger.debug("ModeManager initializing...")
+
         self.display_manager = display_manager
         self.clock = clock
         self.volumio_listener = volumio_listener
+        self.preference_file_path = os.path.join(os.path.dirname(__file__), preference_file_path)
+
+        # Load persisted preferences after logger is ready
+        self.current_display_mode = self._load_screen_preference()
 
         # Managers will be set later
         self.original_screen = None
@@ -42,13 +54,9 @@ class ModeManager:
         self.library_manager = None
         self.usb_library_manager = None
         self.spotify_manager = None
-        self.modern_screen = None  
+        self.modern_screen = None
 
-
-        # Initialize logger
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.DEBUG)  # Set to DEBUG level for detailed logs
-        self.logger.debug("ModeManager initialized.")
+        self.logger.debug("ModeManager: Initializing state machine...")
 
         # Initialize state machine
         self.machine = Machine(
@@ -98,7 +106,40 @@ class ModeManager:
         self.pause_stop_timer = None
         self.pause_stop_delay = 0.5  # Delay in seconds before switching to clock mode
 
-    # Add setter methods for the managers
+    def _load_screen_preference(self):
+        """Load the display mode preference from JSON file if available."""
+        if os.path.exists(self.preference_file_path):
+            try:
+                with open(self.preference_file_path, "r") as f:
+                    data = json.load(f)
+                    mode = data.get("display_mode", "original")
+                    self.logger.info(f"ModeManager: Loaded display mode preference: {mode}")
+                    return mode
+            except (json.JSONDecodeError, IOError) as e:
+                self.logger.warning(f"ModeManager: Failed to load screen preference, using default. Error: {e}")
+        else:
+            self.logger.info("ModeManager: No preference file found, using default display mode 'original'.")
+        return "original"
+
+    def _save_screen_preference(self):
+        """Save the current display mode preference to JSON file."""
+        data = {"display_mode": self.current_display_mode}
+        try:
+            with open(self.preference_file_path, "w") as f:
+                json.dump(data, f)
+            self.logger.info(f"ModeManager: Saved display mode preference: {self.current_display_mode}")
+        except IOError as e:
+            self.logger.error(f"ModeManager: Failed to save screen preference. Error: {e}")
+
+    def set_display_mode(self, mode_name):
+        """Set the current display mode to either 'original' or 'modern', and persist it."""
+        if mode_name in ['original', 'modern']:
+            self.current_display_mode = mode_name
+            self.logger.info(f"ModeManager: Display mode set to {mode_name}.")
+            self._save_screen_preference()  # Persist to file
+        else:
+            self.logger.warning(f"ModeManager: Attempted to set unknown display mode: {mode_name}")
+
 
     def get_active_manager(self):
         """Return the name of the currently active manager."""
@@ -201,13 +242,22 @@ class ModeManager:
             self.logger.info("ModeManager: Clock stopped.")
         else:
             self.logger.error("ModeManager: Clock instance is not set.")
-        
-        # Start OriginalScreen
-        if self.original_screen:
-            self.original_screen.start_mode()
-            self.logger.info("ModeManager: OriginalScreen mode started.")
+
+        # Start the chosen display mode’s screen
+        if self.current_display_mode == 'modern':
+            if self.modern_screen:
+                self.modern_screen.start_mode()
+                self.logger.info("ModeManager: ModernScreen mode started.")
+            else:
+                self.logger.error("ModeManager: modern_screen is not set.")
         else:
-            self.logger.error("ModeManager: original_screen is not set.")
+            # Default to original if not modern
+            if self.original_screen:
+                self.original_screen.start_mode()
+                self.logger.info("ModeManager: OriginalScreen mode started.")
+            else:
+                self.logger.error("ModeManager: original_screen is not set.")
+
 
 
     def enter_webradio_screen(self, event):
@@ -529,7 +579,10 @@ class ModeManager:
             if service == "webradio":
                 self.to_webradio()
             else:
-                self.to_playback()
+                if self.current_display_mode == 'modern':
+                    self.to_modern()
+                else:
+                    self.to_original()
 
         elif status == "pause":
             self._start_pause_timer()

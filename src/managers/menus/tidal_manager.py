@@ -377,9 +377,18 @@ class TidalManager(BaseManager):
         bitdepth = state.get("bitdepth", "Unknown Bit Depth")
         volume = state.get("volume", "Unknown Volume")
 
-        # Forward the information to the OriginalScreen to handle the playback metrics
-        if self.mode_manager.original_screen:
-            self.mode_manager.original_screen.update_playback_metrics(state)
-            self.logger.debug("TidalManager: Forwarded playback metrics to OriginalScreen.")
+        # Determine which screen to use based on current display mode
+        if self.mode_manager.current_display_mode == 'original':
+            if self.mode_manager.original_screen:
+                self.mode_manager.original_screen.update_playback_metrics(state)
+                self.logger.debug("TidalManager: Forwarded playback metrics to OriginalScreen.")
+            else:
+                self.logger.error("TidalManager: OriginalScreen is not set in ModeManager.")
+        elif self.mode_manager.current_display_mode == 'modern':
+            if self.mode_manager.modern_screen:
+                self.mode_manager.modern_screen.update_playback_metrics(state)
+                self.logger.debug("TidalManager: Forwarded playback metrics to ModernScreen.")
+            else:
+                self.logger.error("TidalManager: ModernScreen is not set in ModeManager.")
         else:
-            self.logger.error("TidalManager: OriginalScreen is not set in ModeManager.")
+            self.logger.warning("TidalManager: Unknown display mode; cannot update playback metrics.")
