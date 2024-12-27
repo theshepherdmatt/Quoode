@@ -504,11 +504,10 @@ setup_cava_service() {
     SRC_CAVA_FILE="/home/$INSTALL_USER/Quoode/service/cava.service"
 
     if [[ -f "$SRC_CAVA_FILE" ]]; then
-        # Replace "matt" references with $INSTALL_USER in cava.service
-        run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_CAVA_FILE\""
-        run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_CAVA_FILE\""
-        run_command "sed -i \"s:/home/matt/.config/cava:/home/$INSTALL_USER/.config/cava:g\" \"$SRC_CAVA_FILE\""
+        # Replace all occurrences of "__INSTALL_USER__" in the service file
+        run_command "sed -i \"s:__INSTALL_USER__:$INSTALL_USER:g\" \"$SRC_CAVA_FILE\""
 
+        # Copy the updated service file to the systemd directory
         run_command "cp \"$SRC_CAVA_FILE\" \"$CAVA_SERVICE_FILE\""
         log_message "success" "cava.service copied to $CAVA_SERVICE_FILE."
     else
@@ -516,6 +515,7 @@ setup_cava_service() {
         exit 1
     fi
 
+    # Reload systemd to recognize the new service file
     run_command "systemctl daemon-reload"
     run_command "systemctl enable cava.service"
     run_command "systemctl start cava.service"
@@ -601,7 +601,7 @@ main() {
 
     set_permissions
 
-    log_message "success" "Installation complete. Please verify the setup and reboot"
+    log_message "success" "Installation complete. Please verify the setup."
 }
 
 # Execute the main function
