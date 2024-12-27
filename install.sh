@@ -1,3 +1,4 @@
+
 #!/bin/bash
 set -e  # Exit immediately if a command exits with a non-zero status
 # Uncomment the next line for debugging
@@ -30,28 +31,29 @@ banner() {
     echo -e "\033[0;35m"
     echo "                                                                                                                                 "
     echo "                                                                  dddddddd                                                       "
-    echo "     QQQQQQQQQ                                                    d::::::d  iiii     ffffffffffffffff                            "
-    echo "   QQ:::::::::QQ                                                  d::::::d i::::i   f::::::::::::::::f                           "
-    echo " QQ:::::::::::::QQ                                                d::::::d  iiii   f::::::::::::::::::f                          "
-    echo "Q:::::::QQQ:::::::Q                                               d:::::d          f::::::fffffff:::::f                          "
-    echo "Q::::::O   Q::::::Quuuuuu    uuuuuu    aaaaaaaaaaaaa      ddddddddd:::::d iiiiiii  f:::::f       ffffffyyyyyyy           yyyyyyy"
-    echo "Q:::::O     Q:::::Qu::::u    u::::u    a::::::::::::a   dd::::::::::::::d i:::::i  f:::::f              y:::::y         y:::::y "
-    echo "Q:::::O     Q:::::Qu::::u    u::::u    aaaaaaaaa:::::a d::::::::::::::::d  i::::i f:::::::ffffff         y:::::y       y:::::y  "
-    echo "Q:::::O     Q:::::Qu::::u    u::::u             a::::ad:::::::ddddd:::::d  i::::i f::::::::::::f          y:::::y     y:::::y   "
-    echo "Q:::::O     Q:::::Qu::::u    u::::u      aaaaaaa:::::ad::::::d    d:::::d  i::::i f::::::::::::f           y:::::y   y:::::y    "
-    echo "Q:::::O     Q:::::Qu::::u    u::::u    aa::::::::::::ad:::::d     d:::::d  i::::i f:::::::ffffff            y:::::y y:::::y     "
-    echo "Q:::::O  QQQQ:::::Qu::::u    u::::u   a::::aaaa::::::ad:::::d     d:::::d  i::::i  f:::::f                   y:::::y:::::y      "
-    echo "Q::::::O Q::::::::Qu:::::::::::::::uua::::a    a:::::ad::::::ddddd::::::ddi::::::if:::::::f                    y:::::::y        "
-    echo " QQ::::::::::::::Q  u:::::::::::::::ua::::a    a:::::ad:::::::::::::::::::::di::::::if:::::::f                     y:::::y         "
-    echo "   QQ:::::::::::Q    uu::::::::uu:::u a::::::::::aa:::a d:::::::::ddd::::di::::::if:::::::f                    y:::::y          "
-    echo "     QQQQQQQQ::::QQ    uuuuuuuu  uuuu  aaaaaaaaaa  aaaa  ddddddddd   dddddiiiiiiiifffffffff                   y:::::y           "
-    echo "             Q:::::Q                                                                                         y:::::y            "
-    echo "              QQQQQQ                                                                                        y:::::y             "
-    echo "                                                                                                           y:::::y              "
-    echo "                                                                                                          yyyyyyy               "
+    echo "     QQQQQQQQQ     UUUUUUUU     UUUUUUUU     OOOOOOOOO          OOOOOOOOO     DDDDDDDDDDDDD      EEEEEEEEEEEEEEEEEEEEEE         "
+    echo "   QQ:::::::::QQ   U::::::U     U::::::U   OO:::::::::OO      OO:::::::::OO   D::::::::::::DDD   E::::::::::::::::::::E         "
+    echo " QQ:::::::::::::QQ U::::::U     U::::::U OO:::::::::::::OO  OO:::::::::::::OO D:::::::::::::::DD E::::::::::::::::::::E         "
+    echo "Q:::::::QQQ:::::::QUU:::::U     U:::::UUO:::::::OOO:::::::OO:::::::OOO:::::::ODDD:::::DDDDD:::::DEE::::::EEEEEEEEE::::E         "
+    echo "Q::::::O   Q::::::Q U:::::U     U:::::U O::::::O   O::::::OO::::::O   O::::::O  D:::::D    D:::::D E:::::E       EEEEEE         "
+    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::E                     "
+    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE::::::EEEEEEEEEE           "
+    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::::::::::::E           "
+    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::::::::::::E           "
+    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE::::::EEEEEEEEEE           "
+    echo "Q:::::O  QQQQ:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::E                     "
+    echo "Q::::::O Q::::::::Q U::::::U   U::::::U O::::::O   O::::::OO::::::O   O::::::O  D:::::D    D:::::D E:::::E       EEEEEE         "
+    echo "Q:::::::QQ::::::::Q U:::::::UUU:::::::U O:::::::OOO:::::::OO:::::::OOO:::::::ODDD:::::DDDDD:::::DEE::::::EEEEEEEE:::::E         "
+    echo " QQ::::::::::::::Q   UU:::::::::::::UU   OO:::::::::::::OO  OO:::::::::::::OO D:::::::::::::::DD E::::::::::::::::::::E         "
+    echo "   QQ:::::::::::Q      UU:::::::::UU       OO:::::::::OO      OO:::::::::OO   D::::::::::::DDD   E::::::::::::::::::::E         "
+    echo "     QQQQQQQQ::::QQ      UUUUUUUUU           OOOOOOOOO          OOOOOOOOO     DDDDDDDDDDDDD      EEEEEEEEEEEEEEEEEEEEEE         "
+    echo "             Q:::::Q                                                                                                           "
+    echo "              QQQQQQ                                                                                                           "
+    echo "                                                                                                                               "
     echo "                                                                                                                                 "
     echo -e "\033[0m"
 }
+
 
 # ============================
 #   Log Message Functions
@@ -107,6 +109,7 @@ configure_buttons_leds() {
     log_progress "Configuring Buttons and LEDs activation..."
 
     MAIN_PY_PATH="/home/$INSTALL_USER/Quoode/src/main.py"
+    CONFIGURE_BUTTONS_LEDS=false  # Initialize as false
 
     if [[ ! -f "$MAIN_PY_PATH" ]]; then
         log_message "error" "main.py not found at $MAIN_PY_PATH."
@@ -117,6 +120,7 @@ configure_buttons_leds() {
         read -rp "Do you need buttons and LEDs activated? (y/n): " yn
         case $yn in
             [Yy]* )
+                CONFIGURE_BUTTONS_LEDS=true
                 log_message "info" "Buttons and LEDs will be activated."
                 if grep -q "^[#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
                     sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^#//' "$MAIN_PY_PATH"
@@ -134,6 +138,7 @@ configure_buttons_leds() {
                 break
                 ;;
             [Nn]* )
+                CONFIGURE_BUTTONS_LEDS=false
                 log_message "info" "Buttons and LEDs will be deactivated."
                 if grep -q "^[^#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
                     sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
@@ -158,6 +163,7 @@ configure_buttons_leds() {
 
     log_message "success" "Buttons and LEDs configuration completed."
 }
+
 
 # ============================
 #   Install System-Level Dependencies
@@ -350,27 +356,24 @@ setup_samba() {
 setup_main_service() {
     log_progress "Setting up the Main Quoode Service..."
 
+    # Define service file paths
     SERVICE_FILE="/etc/systemd/system/quoode.service"
     SRC_SERVICE_FILE="/home/$INSTALL_USER/Quoode/service/quoode.service"
 
+    # Check if source service file exists
     if [[ -f "$SRC_SERVICE_FILE" ]]; then
-        # Replace "matt" references with $INSTALL_USER in the original service file
-        run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
-        run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
-        run_command "sed -i \"s:/home/matt/Quoode:/home/$INSTALL_USER/Quoode:g\" \"$SRC_SERVICE_FILE\""
+        # Replace the placeholder `__INSTALL_USER__` with the actual username
+        sed "s|__INSTALL_USER__|$INSTALL_USER|g" "$SRC_SERVICE_FILE" > "$SERVICE_FILE"
+        log_message "success" "Service file updated with user $INSTALL_USER and copied to $SERVICE_FILE."
 
-        run_command "cp \"$SRC_SERVICE_FILE\" \"$SERVICE_FILE\""
-        log_message "success" "quoode.service copied to $SERVICE_FILE."
+        # Reload systemd and start the service
+        run_command "systemctl daemon-reload"
+        run_command "systemctl enable --now quoode.service" 
+        log_message "success" "Main Quoode Service has been enabled and started."
     else
         log_message "error" "Service file quoode.service not found in /home/$INSTALL_USER/Quoode/service."
         exit 1
     fi
-
-    run_command "systemctl daemon-reload"
-    run_command "systemctl enable quoode.service"
-    run_command "systemctl start quoode.service"
-
-    log_message "success" "Main Quoode Service has been enabled and started."
 }
 
 # ============================
@@ -570,12 +573,19 @@ main() {
     banner
     log_message "info" "Starting the installation script..."
     check_root
-    configure_buttons_leds   # Moved to the beginning
+    configure_buttons_leds
+
+    # Skip detect_i2c_address if buttons and LEDs are not configured
+    if [ "$CONFIGURE_BUTTONS_LEDS" = true ]; then
+        enable_i2c_spi
+        detect_i2c_address
+    else
+        log_message "info" "Skipping I2C address detection as buttons and LEDs are not being used."
+    fi
+
     install_system_dependencies
-    enable_i2c_spi
     upgrade_pip_system_wide
     install_python_dependencies
-    detect_i2c_address
     setup_main_service
 
     configure_mpd
