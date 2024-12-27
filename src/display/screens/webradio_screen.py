@@ -18,8 +18,8 @@ class WebRadioScreen(BaseManager):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_active = False  # Initialize is_active as False
 
-        self.local_album_art_path = "/home/matt/Quadify/src/assets/images/webradio.png"
-        self.cache_dir = "/home/matt/Quadify/src/cache/album_art"
+        self.local_album_art_path = "/home/matt/Quoode/src/assets/images/webradio.png"
+        self.cache_dir = "/home/matt/Quoode/src/cache/album_art"
         os.makedirs(self.cache_dir, exist_ok=True)
 
         # Load the local BMP fallback album art once during initialization

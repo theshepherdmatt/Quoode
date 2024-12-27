@@ -270,14 +270,14 @@ def main():
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        logger.info("Shutting down Quadify...")
+        logger.info("Shutting down Quoode...")
     finally:
         buttons_leds.stop()
         rotary_control.stop()
         moode_listener.stop()
         clock.stop()
         display_manager.clear_screen()
-        logger.info("Quadify has been shut down gracefully.")
+        logger.info("Quoode has been shut down gracefully.")
 
 if __name__ == "__main__":
     main()

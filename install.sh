@@ -164,7 +164,7 @@ install_python_dependencies() {
     run_command "python3 -m pip install --upgrade pip setuptools wheel"
 
     # Install dependencies from requirements.txt with verbose output and no cache
-    run_command "python3 -m pip install --upgrade --ignore-installed --no-cache-dir --verbose -r /home/$INSTALL_USER/Quadify/requirements.txt > /home/$INSTALL_USER/install.log 2>&1"
+    run_command "python3 -m pip install --upgrade --ignore-installed --no-cache-dir --verbose -r /home/$INSTALL_USER/Quoode/requirements.txt > /home/$INSTALL_USER/install.log 2>&1"
 
     # Check if the installation succeeded
     if [ $? -ne 0 ]; then
@@ -247,7 +247,7 @@ detect_i2c_address() {
 
 update_buttonsleds_address() {
     local detected_address="$1"
-    BUTTONSLEDS_FILE="/home/$INSTALL_USER/Quadify/src/hardware/buttonsleds.py"
+    BUTTONSLEDS_FILE="/home/$INSTALL_USER/Quoode/src/hardware/buttonsleds.py"
 
     if [[ -f "$BUTTONSLEDS_FILE" ]]; then
         if grep -q "mcp23017_address" "$BUTTONSLEDS_FILE"; then
@@ -267,7 +267,7 @@ update_buttonsleds_address() {
 #   Configure Samba
 # ============================
 setup_samba() {
-    log_progress "Configuring Samba for Quadify..."
+    log_progress "Configuring Samba for Quoode..."
 
     SMB_CONF="/etc/samba/smb.conf"
 
@@ -276,29 +276,29 @@ setup_samba() {
         log_message "info" "Backup of smb.conf created."
     fi
 
-    if ! grep -q "\[Quadify\]" "$SMB_CONF"; then
-        echo -e "\n[Quadify]\n   path = /home/$INSTALL_USER/Quadify\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = $INSTALL_USER\n   create mask = 0777\n   directory mask = 0777\n   public = yes" >> "$SMB_CONF"
-        log_message "success" "Samba configuration for Quadify added."
+    if ! grep -q "\[Quoode\]" "$SMB_CONF"; then
+        echo -e "\n[Quoode]\n   path = /home/$INSTALL_USER/Quoode\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = $INSTALL_USER\n   create mask = 0777\n   directory mask = 0777\n   public = yes" >> "$SMB_CONF"
+        log_message "success" "Samba configuration for Quoode added."
     else
-        log_message "info" "Samba configuration for Quadify already exists."
+        log_message "info" "Samba configuration for Quoode already exists."
     fi
 
     run_command "systemctl restart smbd"
     log_message "success" "Samba service restarted."
 
-    run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quadify"
-    run_command "chmod -R 777 /home/$INSTALL_USER/Quadify"
-    log_message "success" "Permissions for /home/$INSTALL_USER/Quadify set successfully."
+    run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quoode"
+    run_command "chmod -R 777 /home/$INSTALL_USER/Quoode"
+    log_message "success" "Permissions for /home/$INSTALL_USER/Quoode set successfully."
 }
 
 # ============================
 #   Configure Systemd Service
 # ============================
 setup_main_service() {
-    log_progress "Setting up the Main Quadify Service..."
+    log_progress "Setting up the Main Quoode Service..."
 
-    SERVICE_FILE="/etc/systemd/system/quadify.service"
-    SRC_SERVICE_FILE="/home/$INSTALL_USER/Quadify/service/quadify.service"
+    SERVICE_FILE="/etc/systemd/system/quoode.service"
+    SRC_SERVICE_FILE="/home/$INSTALL_USER/Quoode/service/quoode.service"
 
     if [[ -f "$SRC_SERVICE_FILE" ]]; then
         #
@@ -307,20 +307,20 @@ setup_main_service() {
         # If the file uses placeholders like __INSTALL_USER__, you can sed those out:
         run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
         run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
-        run_command "sed -i \"s:/home/matt/Quadify:/home/$INSTALL_USER/Quadify:g\" \"$SRC_SERVICE_FILE\""
+        run_command "sed -i \"s:/home/matt/Quoode:/home/$INSTALL_USER/Quoode:g\" \"$SRC_SERVICE_FILE\""
 
         run_command "cp \"$SRC_SERVICE_FILE\" \"$SERVICE_FILE\""
-        log_message "success" "quadify.service copied to $SERVICE_FILE."
+        log_message "success" "quoode.service copied to $SERVICE_FILE."
     else
-        log_message "error" "Service file quadify.service not found in /home/$INSTALL_USER/Quadify/service."
+        log_message "error" "Service file quoode.service not found in /home/$INSTALL_USER/Quoode/service."
         exit 1
     fi
 
     run_command "systemctl daemon-reload"
-    run_command "systemctl enable quadify.service"
-    run_command "systemctl start quadify.service"
+    run_command "systemctl enable quoode.service"
+    run_command "systemctl start quoode.service"
 
-    log_message "success" "Main Quadify Service has been enabled and started."
+    log_message "success" "Main Quoode Service has been enabled and started."
 }
 
 # ============================
@@ -450,7 +450,7 @@ setup_cava_service() {
     log_progress "Setting up the CAVA Service..."
 
     CAVA_SERVICE_FILE="/etc/systemd/system/cava.service"
-    SRC_CAVA_FILE="/home/$INSTALL_USER/Quadify/service/cava.service"
+    SRC_CAVA_FILE="/home/$INSTALL_USER/Quoode/service/cava.service"
 
     if [[ -f "$SRC_CAVA_FILE" ]]; then
         #
@@ -463,7 +463,7 @@ setup_cava_service() {
         run_command "cp \"$SRC_CAVA_FILE\" \"$CAVA_SERVICE_FILE\""
         log_message "success" "cava.service copied to $CAVA_SERVICE_FILE."
     else
-        log_message "error" "Service file cava.service not found in /home/$INSTALL_USER/Quadify/service."
+        log_message "error" "Service file cava.service not found in /home/$INSTALL_USER/Quoode/service."
         exit 1
     fi
 
@@ -480,7 +480,7 @@ setup_cava_service() {
 configure_buttons_leds() {
     log_progress "Configuring Buttons and LEDs activation..."
 
-    MAIN_PY_PATH="/home/$INSTALL_USER/Quadify/src/main.py"
+    MAIN_PY_PATH="/home/$INSTALL_USER/Quoode/src/main.py"
 
     if [[ ! -f "$MAIN_PY_PATH" ]]; then
         log_message "error" "main.py not found at $MAIN_PY_PATH."
@@ -539,10 +539,10 @@ configure_buttons_leds() {
 set_permissions() {
     log_progress "Setting ownership and permissions of project directory..."
 
-    run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quadify"
-    run_command "chmod -R 755 /home/$INSTALL_USER/Quadify"
+    run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quoode"
+    run_command "chmod -R 755 /home/$INSTALL_USER/Quoode"
 
-    log_message "success" "Ownership and permissions set for /home/$INSTALL_USER/Quadify."
+    log_message "success" "Ownership and permissions set for /home/$INSTALL_USER/Quoode."
 }
 
 # ============================
