@@ -237,50 +237,47 @@ install_python_dependencies() {
 #   Enable I2C and SPI in firmware/config.txt
 # ============================
 enable_i2c_spi() {
-    log_progress "Enabling I2C and SPI in firmware/config.txt..."
+    log_progress "Ensuring I2C and SPI are enabled in firmware/config.txt..."
 
     CONFIG_FILE="/boot/firmware/config.txt"
 
+    # Ensure the file exists
     if [ ! -f "$CONFIG_FILE" ]; then
         log_message "error" "Configuration file $CONFIG_FILE does not exist."
         exit 1
     fi
 
-    if ! grep -q "^dtparam=spi=on" "$CONFIG_FILE"; then
-        echo "dtparam=spi=on" >> "$CONFIG_FILE"
-        log_message "success" "SPI enabled."
+    # Handle I2C
+    if grep -q "^dtparam=i2c_arm=" "$CONFIG_FILE"; then
+        if ! grep -q "^dtparam=i2c_arm=on" "$CONFIG_FILE"; then
+            sed -i "s/^dtparam=i2c_arm=.*/dtparam=i2c_arm=on/" "$CONFIG_FILE"
+            log_message "info" "Updated I2C configuration to 'dtparam=i2c_arm=on'."
+        else
+            log_message "info" "I2C is already enabled."
+        fi
     else
-        log_message "info" "SPI is already enabled."
-    fi
-
-    if ! grep -q "^dtparam=i2c_arm=on" "$CONFIG_FILE"; then
         echo "dtparam=i2c_arm=on" >> "$CONFIG_FILE"
-        log_message "success" "I2C enabled."
-    else
-        log_message "info" "I2C is already enabled."
+        log_message "success" "I2C configuration added to $CONFIG_FILE."
     fi
 
-    log_message "success" "I2C and SPI enabled in firmware/config.txt."
+    # Handle SPI
+    if grep -q "^dtparam=spi=" "$CONFIG_FILE"; then
+        if ! grep -q "^dtparam=spi=on" "$CONFIG_FILE"; then
+            sed -i "s/^dtparam=spi=.*/dtparam=spi=on/" "$CONFIG_FILE"
+            log_message "info" "Updated SPI configuration to 'dtparam=spi=on'."
+        else
+            log_message "info" "SPI is already enabled."
+        fi
+    else
+        echo "dtparam=spi=on" >> "$CONFIG_FILE"
+        log_message "success" "SPI configuration added to $CONFIG_FILE."
+    fi
 
     log_progress "Loading I2C and SPI kernel modules..."
     run_command "modprobe i2c-dev"
     run_command "modprobe spi-bcm2835"
 
     log_message "success" "I2C and SPI kernel modules loaded."
-
-    if [ -e /dev/i2c-1 ]; then
-        log_message "success" "/dev/i2c-1 is present."
-    else
-        log_message "warning" "/dev/i2c-1 is not present. Attempting to initialize I2C..."
-        run_command "modprobe i2c-bcm2708"
-        sleep 1
-        if [ -e /dev/i2c-1 ]; then
-            log_message "success" "/dev/i2c-1 successfully initialized."
-        else
-            log_message "error" "/dev/i2c-1 could not be initialized. Please ensure I2C is enabled correctly."
-            exit 1
-        fi
-    fi
 }
 
 # ============================
