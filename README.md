@@ -1,5 +1,5 @@
-# Quadify Repository Overview
-This repository is a comprehensive guide and toolkit for integrating Quadify audio hardware enhancements into Raspberry Pi audio systems, initially developed by Audiophonics and subsequently enhanced by the Quadify team.
+# Quoode Repository Overview
+This repository is a comprehensive guide and toolkit for integrating Quoode audio hardware enhancements into Raspberry Pi audio systems, initially developed by Audiophonics and subsequently enhanced by the Quadify team.
 
 Contained within are all necessary files and instructions to equip your Raspberry Pi audio setup with Quadify’s specialised hardware, alongside a suite of tools for optimising your device for high-quality audio playback.
 
@@ -20,12 +20,12 @@ Contained within are all necessary files and instructions to equip your Raspberr
 
 * Step 1: Download source files (this repository).
 ```bash
-git clone https://github.com/theshepherdmatt/Quadify.git
+git clone https://github.com/theshepherdmatt/Quoode.git
 ```
 
 * Step 2: Enter the directory for Volumio
 ```bash
-cd Quadify
+cd Quoode
 ```
 
 * Step 3: Run the installation script **as root** to install all available features
