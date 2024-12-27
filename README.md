@@ -24,13 +24,9 @@ sudo apt-get install git -y
 git clone https://github.com/theshepherdmatt/Quoode.git
 ```
 
-* Step 2: Enter the directory for Volumio
+* Step 2: Enter the directory for Moode and run the installation script **as root** to install all available features
 ```bash
 cd Quoode
-```
-
-* Step 3: Run the installation script **as root** to install all available features
-```bash
 sudo bash install.sh
 ```
 
