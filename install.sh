@@ -271,25 +271,44 @@ setup_samba() {
 
     SMB_CONF="/etc/samba/smb.conf"
 
+    # Backup the original smb.conf file if not already backed up
     if [ ! -f "$SMB_CONF.bak" ]; then
         run_command "cp $SMB_CONF $SMB_CONF.bak"
-        log_message "info" "Backup of smb.conf created."
+        log_message "info" "Backup of smb.conf created at $SMB_CONF.bak."
     fi
 
+    # Add Samba configuration for Quoode if it doesn't already exist
     if ! grep -q "\[Quoode\]" "$SMB_CONF"; then
-        echo -e "\n[Quoode]\n   path = /home/$INSTALL_USER/Quoode\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = $INSTALL_USER\n   create mask = 0777\n   directory mask = 0777\n   public = yes" >> "$SMB_CONF"
-        log_message "success" "Samba configuration for Quoode added."
+        log_progress "Adding Samba configuration for Quoode..."
+        cat <<EOL >> "$SMB_CONF"
+
+[Quoode]
+   path = /home/$INSTALL_USER/Quoode
+   writable = yes
+   browseable = yes
+   guest ok = yes
+   force user = $INSTALL_USER
+   create mask = 0777
+   directory mask = 0777
+   public = yes
+EOL
+        log_message "success" "Samba configuration for Quoode added to $SMB_CONF."
     else
-        log_message "info" "Samba configuration for Quoode already exists."
+        log_message "info" "Samba configuration for Quoode already exists in $SMB_CONF."
     fi
 
+    # Restart the Samba service to apply the changes
+    log_progress "Restarting Samba service..."
     run_command "systemctl restart smbd"
     log_message "success" "Samba service restarted."
 
+    # Set correct ownership and permissions for the Quoode directory
+    log_progress "Setting ownership and permissions for /home/$INSTALL_USER/Quoode..."
     run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quoode"
     run_command "chmod -R 777 /home/$INSTALL_USER/Quoode"
-    log_message "success" "Permissions for /home/$INSTALL_USER/Quoode set successfully."
+    log_message "success" "Ownership and permissions set for /home/$INSTALL_USER/Quoode."
 }
+
 
 # ============================
 #   Configure Systemd Service
