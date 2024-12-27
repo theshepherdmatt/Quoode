@@ -379,34 +379,33 @@ configure_mpd() {
     log_progress "Configuring MPD for CAVA in moOde..."
 
     MPD_OVERRIDE_FILE="/etc/mpd.conf"
-    FIFO_OUTPUT="
-    audio_output {
+    FIFO_OUTPUT="audio_output {
         type            \"fifo\"
-        name            \"my_fifo\"
+        name            \"CAVA FIFO Output\"
         path            \"/tmp/cava.fifo\"
         format          \"44100:16:2\"
     }"
 
-    if [ ! -f "$MPD_OVERRIDE_FILE" ]; then
-        log_progress "Creating MPD configuration file..."
-        run_command "touch $MPD_OVERRIDE_FILE"
+    # Backup the configuration file
+    if [ ! -f "${MPD_OVERRIDE_FILE}.bak" ]; then
+        log_progress "Creating a backup of MPD configuration..."
+        run_command "cp $MPD_OVERRIDE_FILE ${MPD_OVERRIDE_FILE}.bak"
+        log_message "success" "Backup created at ${MPD_OVERRIDE_FILE}.bak"
     fi
 
+    # Check and append FIFO output configuration
     if grep -q "path.*\"/tmp/cava.fifo\"" "$MPD_OVERRIDE_FILE"; then
         log_message "info" "FIFO output configuration already exists in MPD config."
     else
         log_progress "Adding FIFO output configuration to MPD config..."
-        echo "$FIFO_OUTPUT" | tee -a "$MPD_OVERRIDE_FILE" >> "$LOG_FILE"
+        echo "$FIFO_OUTPUT" >> "$MPD_OVERRIDE_FILE"
         log_message "success" "FIFO output configuration added to MPD config."
     fi
 
-    log_progress "Restarting MPD to apply changes..."
-    if systemctl restart mpd >> "$LOG_FILE" 2>&1; then
-        log_message "success" "MPD restarted with updated configuration."
-    else
-        log_message "error" "Failed to restart MPD. Check the configuration and try again."
-    fi
-}
+    # Restart MPD to apply changes
+    log_progress "Restarting MPD to apply configuration changes..."
+    if
+
 
 # ============================
 #   Install CAVA Dependencies and Build
