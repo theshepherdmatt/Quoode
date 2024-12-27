@@ -604,7 +604,7 @@ main() {
 
     set_permissions
 
-    log_message "success" "Installation complete. Please verify the setup."
+    log_message "success" "Installation complete. Please verify the setup and reboot"
 }
 
 # Execute the main function
