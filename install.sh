@@ -543,8 +543,11 @@ setup_samba() {
         log_message "info" "Samba configuration for Quoode already exists."
     fi
 
-    run_command "systemctl restart smbd"
-    log_message "success" "Samba service restarted."
+    # Ensure Samba services are enabled and started
+    log_progress "Enabling and starting Samba services..."
+    run_command "systemctl enable smbd nmbd"
+    run_command "systemctl restart smbd nmbd"
+    log_message "success" "Samba services enabled and started."
 
     run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quoode"
     run_command "chmod -R 755 /home/$INSTALL_USER/Quoode"
@@ -572,9 +575,11 @@ main() {
     check_root
     configure_buttons_leds
 
+    # Enable SPI and detect I2C address, regardless of button/LED configuration
+    enable_i2c_spi
+
     # Skip detect_i2c_address if buttons and LEDs are not configured
     if [ "$CONFIGURE_BUTTONS_LEDS" = true ]; then
-        enable_i2c_spi
         detect_i2c_address
     else
         log_message "info" "Skipping I2C address detection as buttons and LEDs are not being used."
