@@ -297,25 +297,22 @@ setup_samba() {
 setup_main_service() {
     log_progress "Setting up the Main Quoode Service..."
 
+    SERVICE_TEMPLATE="/home/$INSTALL_USER/Quoode/service/quoode.service"
     SERVICE_FILE="/etc/systemd/system/quoode.service"
-    SRC_SERVICE_FILE="/home/$INSTALL_USER/Quoode/service/quoode.service"
 
-    if [[ -f "$SRC_SERVICE_FILE" ]]; then
-        #
-        # Replace placeholders (matt) with $INSTALL_USER in the original service file
-        #
-        # If the file uses placeholders like __INSTALL_USER__, you can sed those out:
-        run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
-        run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
-        run_command "sed -i \"s:/home/matt/Quoode:/home/$INSTALL_USER/Quoode:g\" \"$SRC_SERVICE_FILE\""
+    if [[ -f "$SERVICE_TEMPLATE" ]]; then
+        log_progress "Configuring service file for user $INSTALL_USER..."
 
-        run_command "cp \"$SRC_SERVICE_FILE\" \"$SERVICE_FILE\""
-        log_message "success" "quoode.service copied to $SERVICE_FILE."
+        # Replace placeholders with actual user details
+        sed "s:__INSTALL_USER__:$INSTALL_USER:g" "$SERVICE_TEMPLATE" > "$SERVICE_FILE"
+
+        log_message "success" "Service file configured and copied to $SERVICE_FILE."
     else
-        log_message "error" "Service file quoode.service not found in /home/$INSTALL_USER/Quoode/service."
+        log_message "error" "Service template not found at $SERVICE_TEMPLATE."
         exit 1
     fi
 
+    # Reload and enable the service
     run_command "systemctl daemon-reload"
     run_command "systemctl enable quoode.service"
     run_command "systemctl start quoode.service"
