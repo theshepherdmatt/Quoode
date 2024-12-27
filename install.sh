@@ -1,6 +1,7 @@
 #!/bin/bash
 set -e  # Exit immediately if a command exits with a non-zero status
-#set -x  # Uncomment to enable debugging
+# Uncomment the next line for debugging
+# set -x
 
 # ============================
 #   Colour Code Definitions
@@ -17,7 +18,7 @@ NC='\033[0m' # No Color
 # ============================
 TOTAL_STEPS=17
 CURRENT_STEP=0
-LOG_FILE="install.log"
+LOG_FILE="/home/$INSTALL_USER/install.log"
 
 # Remove existing log file
 rm -f "$LOG_FILE"
@@ -40,9 +41,8 @@ banner() {
     echo "Q:::::O     Q:::::Qu::::u    u::::u      aaaaaaa:::::ad::::::d    d:::::d  i::::i f::::::::::::f           y:::::y   y:::::y    "
     echo "Q:::::O     Q:::::Qu::::u    u::::u    aa::::::::::::ad:::::d     d:::::d  i::::i f:::::::ffffff            y:::::y y:::::y     "
     echo "Q:::::O  QQQQ:::::Qu::::u    u::::u   a::::aaaa::::::ad:::::d     d:::::d  i::::i  f:::::f                   y:::::y:::::y      "
-    echo "Q::::::O Q::::::::Qu:::::uuuu:::::u  a::::a    a:::::ad:::::d     d:::::d  i::::i  f:::::f                    y:::::::::y       "
-    echo "Q:::::::QQ::::::::Qu:::::::::::::::uua::::a    a:::::ad::::::ddddd::::::ddi::::::if:::::::f                    y:::::::y        "
-    echo " QQ::::::::::::::Q  u:::::::::::::::ua:::::aaaa::::::a d:::::::::::::::::di::::::if:::::::f                     y:::::y         "
+    echo "Q::::::O Q::::::::Qu:::::::::::::::uua::::a    a:::::ad::::::ddddd::::::ddi::::::if:::::::f                    y:::::::y        "
+    echo " QQ::::::::::::::Q  u:::::::::::::::ua::::a    a:::::ad:::::::::::::::::::::di::::::if:::::::f                     y:::::y         "
     echo "   QQ:::::::::::Q    uu::::::::uu:::u a::::::::::aa:::a d:::::::::ddd::::di::::::if:::::::f                    y:::::y          "
     echo "     QQQQQQQQ::::QQ    uuuuuuuu  uuuu  aaaaaaaaaa  aaaa  ddddddddd   dddddiiiiiiiifffffffff                   y:::::y           "
     echo "             Q:::::Q                                                                                         y:::::y            "
@@ -101,6 +101,65 @@ check_root() {
 INSTALL_USER="${SUDO_USER:-$USER}"
 
 # ============================
+#   Configure Buttons and LEDs Activation
+# ============================
+configure_buttons_leds() {
+    log_progress "Configuring Buttons and LEDs activation..."
+
+    MAIN_PY_PATH="/home/$INSTALL_USER/Quoode/src/main.py"
+
+    if [[ ! -f "$MAIN_PY_PATH" ]]; then
+        log_message "error" "main.py not found at $MAIN_PY_PATH."
+        exit 1
+    fi
+
+    while true; do
+        read -rp "Do you need buttons and LEDs activated? (y/n): " yn
+        case $yn in
+            [Yy]* )
+                log_message "info" "Buttons and LEDs will be activated."
+                if grep -q "^[#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
+                    sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^#//' "$MAIN_PY_PATH"
+                    log_message "success" "Activated 'buttons_leds = ButtonsLEDController(...)' in main.py."
+                else
+                    log_message "info" "'buttons_leds = ButtonsLEDController(...)' is already active in main.py."
+                fi
+
+                if grep -q "^[#]*\s*buttons_leds.start()" "$MAIN_PY_PATH"; then
+                    sed -i.bak '/buttons_leds.start()/ s/^#//' "$MAIN_PY_PATH"
+                    log_message "success" "Activated 'buttons_leds.start()' in main.py."
+                else
+                    log_message "info" "'buttons_leds.start()' is already active in main.py."
+                fi
+                break
+                ;;
+            [Nn]* )
+                log_message "info" "Buttons and LEDs will be deactivated."
+                if grep -q "^[^#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
+                    sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
+                    log_message "success" "Deactivated 'buttons_leds = ButtonsLEDController(...)' in main.py."
+                else
+                    log_message "info" "'buttons_leds = ButtonsLEDController(...)' is already deactivated in main.py."
+                fi
+
+                if grep -q "^[^#]*\s*buttons_leds.start()" "$MAIN_PY_PATH"; then
+                    sed -i.bak '/buttons_leds.start()/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
+                    log_message "success" "Deactivated 'buttons_leds.start()' in main.py."
+                else
+                    log_message "info" "'buttons_leds.start()' is already deactivated in main.py."
+                fi
+                break
+                ;;
+            * )
+                log_message "warning" "Please answer with 'y' or 'n'."
+                ;;
+        esac
+    done
+
+    log_message "success" "Buttons and LEDs configuration completed."
+}
+
+# ============================
 #   Install System-Level Dependencies
 # ============================
 install_system_dependencies() {
@@ -124,67 +183,61 @@ install_system_dependencies() {
         libxml2-dev \
         libxslt1-dev \
         libssl-dev \
-        lsof"
+        lsof \
+        libfftw3-dev \
+        libasound2-dev \
+        libncursesw5-dev \
+        libpulse-dev \
+        libtool \
+        automake \
+        autoconf \
+        gcc \
+        make \
+        git"
 
     log_message "success" "System-level dependencies installed successfully."
 }
 
 # ============================
-#   Upgrade pip, setuptools, and wheel
+#   Upgrade pip, setuptools, and wheel System-Wide
 # ============================
-upgrade_pip() {
-    log_progress "Upgrading pip, setuptools, and wheel in a virtual environment..."
+upgrade_pip_system_wide() {
+    log_progress "Upgrading pip, setuptools, and wheel system-wide..."
 
-    # Define the virtual environment path
-    VENV_DIR="/home/$INSTALL_USER/venv"
+    run_command "python3 -m pip install --upgrade pip setuptools wheel --break-system-packages"
 
-    # Check if the virtual environment already exists
-    if [ ! -d "$VENV_DIR" ]; then
-        log_progress "Creating a new virtual environment at $VENV_DIR..."
-        run_command "python3 -m venv $VENV_DIR"
-        log_message "success" "Virtual environment created at $VENV_DIR."
-    else
-        log_message "info" "Virtual environment already exists at $VENV_DIR."
-    fi
-
-    # Activate the virtual environment and upgrade pip, setuptools, and wheel
-    log_progress "Activating the virtual environment and upgrading pip, setuptools, and wheel..."
-    run_command "source $VENV_DIR/bin/activate && pip install --upgrade pip setuptools wheel --no-cache-dir"
-
-    log_message "success" "pip, setuptools, and wheel upgraded successfully in the virtual environment."
+    log_message "success" "pip, setuptools, and wheel upgraded successfully system-wide."
 }
 
 # ============================
-#   Install Python Dependencies
+#   Install Python Dependencies System-Wide
 # ============================
 install_python_dependencies() {
-    log_progress "Installing Python dependencies..."
-
-    # Upgrade pip, setuptools, and wheel
-    run_command "python3 -m pip install --upgrade pip setuptools wheel"
+    log_progress "Installing Python dependencies system-wide..."
 
     # Install dependencies from requirements.txt with verbose output and no cache
-    run_command "python3 -m pip install --upgrade --ignore-installed --no-cache-dir --verbose -r /home/$INSTALL_USER/Quoode/requirements.txt > /home/$INSTALL_USER/install.log 2>&1"
+    run_command "python3 -m pip install --upgrade --ignore-installed --no-cache-dir --break-system-packages --verbose -r /home/$INSTALL_USER/Quoode/requirements.txt > /home/$INSTALL_USER/install_requirements.log 2>&1"
 
     # Check if the installation succeeded
     if [ $? -ne 0 ]; then
-        log_message "error" "Python dependency installation failed. Check /home/$INSTALL_USER/install.log for details."
+        log_message "error" "Python dependency installation failed. Check /home/$INSTALL_USER/install_requirements.log for details."
         exit 1
     fi
 
-    log_message "success" "Python dependencies installed successfully."
+    log_message "success" "Python dependencies installed successfully system-wide."
 }
 
 # ============================
-#   Enable I2C and SPI in config.txt
+#   Enable I2C and SPI in firmware/config.txt
 # ============================
 enable_i2c_spi() {
-    log_progress "Enabling I2C and SPI in config.txt..."
+    log_progress "Enabling I2C and SPI in firmware/config.txt..."
 
-    CONFIG_FILE="/boot/userconfig.txt"
+    CONFIG_FILE="/boot/firmware/config.txt"
 
     if [ ! -f "$CONFIG_FILE" ]; then
-        run_command "touch \"$CONFIG_FILE\""
+        log_message "error" "Configuration file $CONFIG_FILE does not exist."
+        exit 1
     fi
 
     if ! grep -q "^dtparam=spi=on" "$CONFIG_FILE"; then
@@ -201,7 +254,7 @@ enable_i2c_spi() {
         log_message "info" "I2C is already enabled."
     fi
 
-    log_message "success" "I2C and SPI enabled in config.txt."
+    log_message "success" "I2C and SPI enabled in firmware/config.txt."
 
     log_progress "Loading I2C and SPI kernel modules..."
     run_command "modprobe i2c-dev"
@@ -271,44 +324,25 @@ setup_samba() {
 
     SMB_CONF="/etc/samba/smb.conf"
 
-    # Backup the original smb.conf file if not already backed up
     if [ ! -f "$SMB_CONF.bak" ]; then
         run_command "cp $SMB_CONF $SMB_CONF.bak"
-        log_message "info" "Backup of smb.conf created at $SMB_CONF.bak."
+        log_message "info" "Backup of smb.conf created."
     fi
 
-    # Add Samba configuration for Quoode if it doesn't already exist
     if ! grep -q "\[Quoode\]" "$SMB_CONF"; then
-        log_progress "Adding Samba configuration for Quoode..."
-        cat <<EOL >> "$SMB_CONF"
-
-[Quoode]
-   path = /home/$INSTALL_USER/Quoode
-   writable = yes
-   browseable = yes
-   guest ok = yes
-   force user = $INSTALL_USER
-   create mask = 0777
-   directory mask = 0777
-   public = yes
-EOL
-        log_message "success" "Samba configuration for Quoode added to $SMB_CONF."
+        echo -e "\n[Quoode]\n   path = /home/$INSTALL_USER/Quoode\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = $INSTALL_USER\n   create mask = 0775\n   directory mask = 0775\n   public = no" >> "$SMB_CONF"
+        log_message "success" "Samba configuration for Quoode added."
     else
-        log_message "info" "Samba configuration for Quoode already exists in $SMB_CONF."
+        log_message "info" "Samba configuration for Quoode already exists."
     fi
 
-    # Restart the Samba service to apply the changes
-    log_progress "Restarting Samba service..."
     run_command "systemctl restart smbd"
     log_message "success" "Samba service restarted."
 
-    # Set correct ownership and permissions for the Quoode directory
-    log_progress "Setting ownership and permissions for /home/$INSTALL_USER/Quoode..."
     run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quoode"
-    run_command "chmod -R 777 /home/$INSTALL_USER/Quoode"
-    log_message "success" "Ownership and permissions set for /home/$INSTALL_USER/Quoode."
+    run_command "chmod -R 755 /home/$INSTALL_USER/Quoode"
+    log_message "success" "Permissions for /home/$INSTALL_USER/Quoode set successfully."
 }
-
 
 # ============================
 #   Configure Systemd Service
@@ -316,22 +350,22 @@ EOL
 setup_main_service() {
     log_progress "Setting up the Main Quoode Service..."
 
-    SERVICE_TEMPLATE="/home/$INSTALL_USER/Quoode/service/quoode.service"
     SERVICE_FILE="/etc/systemd/system/quoode.service"
+    SRC_SERVICE_FILE="/home/$INSTALL_USER/Quoode/service/quoode.service"
 
-    if [[ -f "$SERVICE_TEMPLATE" ]]; then
-        log_progress "Configuring service file for user $INSTALL_USER..."
+    if [[ -f "$SRC_SERVICE_FILE" ]]; then
+        # Replace "matt" references with $INSTALL_USER in the original service file
+        run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
+        run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
+        run_command "sed -i \"s:/home/matt/Quoode:/home/$INSTALL_USER/Quoode:g\" \"$SRC_SERVICE_FILE\""
 
-        # Replace placeholders with actual user details
-        sed "s:__INSTALL_USER__:$INSTALL_USER:g" "$SERVICE_TEMPLATE" > "$SERVICE_FILE"
-
-        log_message "success" "Service file configured and copied to $SERVICE_FILE."
+        run_command "cp \"$SRC_SERVICE_FILE\" \"$SERVICE_FILE\""
+        log_message "success" "quoode.service copied to $SERVICE_FILE."
     else
-        log_message "error" "Service template not found at $SERVICE_TEMPLATE."
+        log_message "error" "Service file quoode.service not found in /home/$INSTALL_USER/Quoode/service."
         exit 1
     fi
 
-    # Reload and enable the service
     run_command "systemctl daemon-reload"
     run_command "systemctl enable quoode.service"
     run_command "systemctl start quoode.service"
@@ -347,12 +381,12 @@ configure_mpd() {
 
     MPD_OVERRIDE_FILE="/etc/mpd.conf"
     FIFO_OUTPUT="
-audio_output {
-    type            \"fifo\"
-    name            \"my_fifo\"
-    path            \"/tmp/cava.fifo\"
-    format          \"44100:16:2\"
-}"
+    audio_output {
+        type            \"fifo\"
+        name            \"my_fifo\"
+        path            \"/tmp/cava.fifo\"
+        format          \"44100:16:2\"
+    }"
 
     if [ ! -f "$MPD_OVERRIDE_FILE" ]; then
         log_progress "Creating MPD configuration file..."
@@ -410,7 +444,8 @@ install_cava_from_fork() {
         gcc \
         make \
         pkg-config \
-        libiniparser-dev"
+        libiniparser-dev \
+        git"
 
     if [[ ! -d "$CAVA_INSTALL_DIR" ]]; then
         run_command "git clone $CAVA_REPO $CAVA_INSTALL_DIR"
@@ -469,9 +504,7 @@ setup_cava_service() {
     SRC_CAVA_FILE="/home/$INSTALL_USER/Quoode/service/cava.service"
 
     if [[ -f "$SRC_CAVA_FILE" ]]; then
-        #
         # Replace "matt" references with $INSTALL_USER in cava.service
-        #
         run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_CAVA_FILE\""
         run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_CAVA_FILE\""
         run_command "sed -i \"s:/home/matt/.config/cava:/home/$INSTALL_USER/.config/cava:g\" \"$SRC_CAVA_FILE\""
@@ -491,62 +524,31 @@ setup_cava_service() {
 }
 
 # ============================
-#   Configure Buttons and LEDs
+#   Configure Samba
 # ============================
-configure_buttons_leds() {
-    log_progress "Configuring Buttons and LEDs activation..."
+setup_samba() {
+    log_progress "Configuring Samba for Quoode..."
 
-    MAIN_PY_PATH="/home/$INSTALL_USER/Quoode/src/main.py"
+    SMB_CONF="/etc/samba/smb.conf"
 
-    if [[ ! -f "$MAIN_PY_PATH" ]]; then
-        log_message "error" "main.py not found at $MAIN_PY_PATH."
-        exit 1
+    if [ ! -f "$SMB_CONF.bak" ]; then
+        run_command "cp $SMB_CONF $SMB_CONF.bak"
+        log_message "info" "Backup of smb.conf created."
     fi
 
-    while true; do
-        read -rp "Do you need buttons and LEDs activated? (y/n): " yn
-        case $yn in
-            [Yy]* )
-                log_message "info" "Buttons and LEDs will be activated."
-                if grep -q "^[#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
-                    sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^#//' "$MAIN_PY_PATH"
-                    log_message "success" "Activated 'buttons_leds = ButtonsLEDController(...)' in main.py."
-                else
-                    log_message "info" "'buttons_leds = ButtonsLEDController(...)' is already active in main.py."
-                fi
+    if ! grep -q "\[Quoode\]" "$SMB_CONF"; then
+        echo -e "\n[Quoode]\n   path = /home/$INSTALL_USER/Quoode\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = $INSTALL_USER\n   create mask = 0775\n   directory mask = 0775\n   public = no" >> "$SMB_CONF"
+        log_message "success" "Samba configuration for Quoode added."
+    else
+        log_message "info" "Samba configuration for Quoode already exists."
+    fi
 
-                if grep -q "^[#]*\s*buttons_leds.start()" "$MAIN_PY_PATH"; then
-                    sed -i.bak '/buttons_leds.start()/ s/^#//' "$MAIN_PY_PATH"
-                    log_message "success" "Activated 'buttons_leds.start()' in main.py."
-                else
-                    log_message "info" "'buttons_leds.start()' is already active in main.py."
-                fi
-                break
-                ;;
-            [Nn]* )
-                log_message "info" "Buttons and LEDs will be deactivated."
-                if grep -q "^[^#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
-                    sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
-                    log_message "success" "Deactivated 'buttons_leds = ButtonsLEDController(...)' in main.py."
-                else
-                    log_message "info" "'buttons_leds = ButtonsLEDController(...)' is already deactivated in main.py."
-                fi
+    run_command "systemctl restart smbd"
+    log_message "success" "Samba service restarted."
 
-                if grep -q "^[^#]*\s*buttons_leds.start()" "$MAIN_PY_PATH"; then
-                    sed -i.bak '/buttons_leds.start()/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
-                    log_message "success" "Deactivated 'buttons_leds.start()' in main.py."
-                else
-                    log_message "info" "'buttons_leds.start()' is already deactivated in main.py."
-                fi
-                break
-                ;;
-            * )
-                log_message "warning" "Please answer with 'y' or 'n'."
-                ;;
-        esac
-    done
-
-    log_message "success" "Buttons and LEDs configuration completed."
+    run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quoode"
+    run_command "chmod -R 755 /home/$INSTALL_USER/Quoode"
+    log_message "success" "Permissions for /home/$INSTALL_USER/Quoode set successfully."
 }
 
 # ============================
@@ -568,9 +570,10 @@ main() {
     banner
     log_message "info" "Starting the installation script..."
     check_root
+    configure_buttons_leds   # Moved to the beginning
     install_system_dependencies
     enable_i2c_spi
-    upgrade_pip
+    upgrade_pip_system_wide
     install_python_dependencies
     detect_i2c_address
     setup_main_service
@@ -586,8 +589,6 @@ main() {
 
     setup_cava_service
     echo "DEBUG: Finished installing CAVA Service"
-
-    configure_buttons_leds
 
     setup_samba
 
