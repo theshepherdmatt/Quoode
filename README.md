@@ -20,6 +20,7 @@ Contained within are all necessary files and instructions to equip your Raspberr
 
 * Step 1: Download source files (this repository).
 ```bash
+sudo apt-get install git -y
 git clone https://github.com/theshepherdmatt/Quoode.git
 ```
 
