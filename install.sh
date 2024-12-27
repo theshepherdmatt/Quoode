@@ -15,7 +15,7 @@ NC='\033[0m' # No Color
 # ============================
 #   Variables for Progress Tracking
 # ============================
-TOTAL_STEPS=17  # Updated from 10 to 11
+TOTAL_STEPS=17
 CURRENT_STEP=0
 LOG_FILE="install.log"
 
@@ -96,18 +96,20 @@ check_root() {
 }
 
 # ============================
+#   Detect Current (Non-Root) User
+# ============================
+INSTALL_USER="${SUDO_USER:-$USER}"
+
+# ============================
 #   Install System-Level Dependencies
 # ============================
 install_system_dependencies() {
     log_progress "Installing system-level dependencies, this might take a while....."
 
-    # Update package lists
     run_command "apt-get update"
-
-    # Install essential packages
     run_command "apt-get install -y \
-        python3.7 \
-        python3.7-dev \
+        python3 \
+        python3-dev \
         python3-pip \
         libjpeg-dev \
         zlib1g-dev \
@@ -131,24 +133,44 @@ install_system_dependencies() {
 #   Upgrade pip, setuptools, and wheel
 # ============================
 upgrade_pip() {
-    log_progress "Upgrading pip, setuptools, and wheel..."
+    log_progress "Upgrading pip, setuptools, and wheel in a virtual environment..."
 
-    run_command "python3.7 -m pip install --upgrade pip setuptools wheel"
+    # Define the virtual environment path
+    VENV_DIR="/home/$INSTALL_USER/venv"
 
-    log_message "success" "pip, setuptools, and wheel upgraded."
+    # Check if the virtual environment already exists
+    if [ ! -d "$VENV_DIR" ]; then
+        log_progress "Creating a new virtual environment at $VENV_DIR..."
+        run_command "python3 -m venv $VENV_DIR"
+        log_message "success" "Virtual environment created at $VENV_DIR."
+    else
+        log_message "info" "Virtual environment already exists at $VENV_DIR."
+    fi
+
+    # Activate the virtual environment and upgrade pip, setuptools, and wheel
+    log_progress "Activating the virtual environment and upgrading pip, setuptools, and wheel..."
+    run_command "source $VENV_DIR/bin/activate && pip install --upgrade pip setuptools wheel --no-cache-dir"
+
+    log_message "success" "pip, setuptools, and wheel upgraded successfully in the virtual environment."
 }
 
 # ============================
 #   Install Python Dependencies
 # ============================
 install_python_dependencies() {
-    log_progress "Installing Python dependencies, this might take a bit longer....."
+    log_progress "Installing Python dependencies..."
 
-    # Install pycairo first to resolve PyGObject dependency
-    run_command "python3.7 -m pip install --upgrade --ignore-installed pycairo"
+    # Upgrade pip, setuptools, and wheel
+    run_command "python3 -m pip install --upgrade pip setuptools wheel"
 
-    # Install dependencies from requirements.txt globally with --ignore-installed
-    run_command "python3.7 -m pip install --upgrade --ignore-installed -r /home/volumio/Quadify/requirements.txt"
+    # Install dependencies from requirements.txt with verbose output and no cache
+    run_command "python3 -m pip install --upgrade --ignore-installed --no-cache-dir --verbose -r /home/$INSTALL_USER/Quadify/requirements.txt > /home/$INSTALL_USER/install.log 2>&1"
+
+    # Check if the installation succeeded
+    if [ $? -ne 0 ]; then
+        log_message "error" "Python dependency installation failed. Check /home/$INSTALL_USER/install.log for details."
+        exit 1
+    fi
 
     log_message "success" "Python dependencies installed successfully."
 }
@@ -165,7 +187,6 @@ enable_i2c_spi() {
         run_command "touch \"$CONFIG_FILE\""
     fi
 
-    # Enable SPI and I2C
     if ! grep -q "^dtparam=spi=on" "$CONFIG_FILE"; then
         echo "dtparam=spi=on" >> "$CONFIG_FILE"
         log_message "success" "SPI enabled."
@@ -182,13 +203,12 @@ enable_i2c_spi() {
 
     log_message "success" "I2C and SPI enabled in config.txt."
 
-    # Load kernel modules
     log_progress "Loading I2C and SPI kernel modules..."
     run_command "modprobe i2c-dev"
     run_command "modprobe spi-bcm2835"
+
     log_message "success" "I2C and SPI kernel modules loaded."
 
-    # Verify that /dev/i2c-1 exists
     if [ -e /dev/i2c-1 ]; then
         log_message "success" "/dev/i2c-1 is present."
     else
@@ -207,48 +227,38 @@ enable_i2c_spi() {
 # ============================
 #   Detect MCP23017 I2C Address
 # ============================
-
 detect_i2c_address() {
     log_progress "Detecting MCP23017 I2C address..."
 
-    # Use the absolute path to i2cdetect and capture the output
     i2c_output=$(/usr/sbin/i2cdetect -y 1)
     echo "$i2c_output" >> "$LOG_FILE"
-    
-    # For debugging: Print the i2c_output to the terminal
+
     echo "$i2c_output"
 
-    # Use word boundaries in grep to match exact addresses
     address=$(echo "$i2c_output" | grep -oE '\b(20|21|22|23|24|25|26|27)\b' | head -n 1)
 
     if [[ -z "$address" ]]; then
-        log_message "warning" "MCP23017 not found. Check wiring and connections as per instructions on our website."
+        log_message "warning" "MCP23017 not found. Check wiring and connections as per instructions."
     else
         log_message "success" "Detected MCP23017 at I2C address: 0x$address."
         update_buttonsleds_address "$address"
     fi
 }
 
-# ============================
-#   Update MCP23017 Address in buttonsleds.py
-# ============================
 update_buttonsleds_address() {
     local detected_address="$1"
-    BUTTONSLEDS_FILE="/home/volumio/Quadify/src/hardware/buttonsleds.py"
+    BUTTONSLEDS_FILE="/home/$INSTALL_USER/Quadify/src/hardware/buttonsleds.py"
 
     if [[ -f "$BUTTONSLEDS_FILE" ]]; then
-        # Check if the line exists
         if grep -q "mcp23017_address" "$BUTTONSLEDS_FILE"; then
-            # Replace the existing address
             run_command "sed -i \"s/mcp23017_address = 0x[0-9a-fA-F]\\{2\\}/mcp23017_address = 0x$detected_address/\" \"$BUTTONSLEDS_FILE\""
             log_message "success" "Updated MCP23017 address in buttonsleds.py to 0x$detected_address."
         else
-            # Append the address line if it doesn't exist
             run_command "echo \"mcp23017_address = 0x$detected_address\" >> \"$BUTTONSLEDS_FILE\""
             log_message "success" "Added MCP23017 address in buttonsleds.py as 0x$detected_address."
         fi
     else
-        log_message "error" "buttonsleds.py not found at $BUTTONSLEDS_FILE. Ensure the path is correct."
+        log_message "error" "buttonsleds.py not found at $BUTTONSLEDS_FILE."
         exit 1
     fi
 }
@@ -256,35 +266,29 @@ update_buttonsleds_address() {
 # ============================
 #   Configure Samba
 # ============================
-
-# Add the Samba setup function
 setup_samba() {
     log_progress "Configuring Samba for Quadify..."
 
     SMB_CONF="/etc/samba/smb.conf"
 
-    # Backup the original smb.conf
     if [ ! -f "$SMB_CONF.bak" ]; then
         run_command "cp $SMB_CONF $SMB_CONF.bak"
         log_message "info" "Backup of smb.conf created."
     fi
 
-    # Append Samba configuration for Quadify
     if ! grep -q "\[Quadify\]" "$SMB_CONF"; then
-        echo -e "\n[Quadify]\n   path = /home/volumio/Quadify\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = volumio\n   create mask = 0777\n   directory mask = 0777\n   public = yes" >> "$SMB_CONF"
+        echo -e "\n[Quadify]\n   path = /home/$INSTALL_USER/Quadify\n   writable = yes\n   browseable = yes\n   guest ok = yes\n   force user = $INSTALL_USER\n   create mask = 0777\n   directory mask = 0777\n   public = yes" >> "$SMB_CONF"
         log_message "success" "Samba configuration for Quadify added."
     else
         log_message "info" "Samba configuration for Quadify already exists."
     fi
 
-    # Restart Samba service
     run_command "systemctl restart smbd"
     log_message "success" "Samba service restarted."
 
-    # Set ownership and permissions for the Quadify directory
-    run_command "chown -R volumio:volumio /home/volumio/Quadify"
-    run_command "chmod -R 777 /home/volumio/Quadify"
-    log_message "success" "Permissions for /home/volumio/Quadify set successfully."
+    run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quadify"
+    run_command "chmod -R 777 /home/$INSTALL_USER/Quadify"
+    log_message "success" "Permissions for /home/$INSTALL_USER/Quadify set successfully."
 }
 
 # ============================
@@ -294,20 +298,25 @@ setup_main_service() {
     log_progress "Setting up the Main Quadify Service..."
 
     SERVICE_FILE="/etc/systemd/system/quadify.service"
+    SRC_SERVICE_FILE="/home/$INSTALL_USER/Quadify/service/quadify.service"
 
-    # Copy the service file from the service folder
-    if [[ -f "/home/volumio/Quadify/service/quadify.service" ]]; then
-        run_command "cp /home/volumio/Quadify/service/quadify.service \"$SERVICE_FILE\""
+    if [[ -f "$SRC_SERVICE_FILE" ]]; then
+        #
+        # Replace placeholders (matt) with $INSTALL_USER in the original service file
+        #
+        # If the file uses placeholders like __INSTALL_USER__, you can sed those out:
+        run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
+        run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_SERVICE_FILE\""
+        run_command "sed -i \"s:/home/matt/Quadify:/home/$INSTALL_USER/Quadify:g\" \"$SRC_SERVICE_FILE\""
+
+        run_command "cp \"$SRC_SERVICE_FILE\" \"$SERVICE_FILE\""
         log_message "success" "quadify.service copied to $SERVICE_FILE."
     else
-        log_message "error" "Service file quadify.service not found in services directory."
+        log_message "error" "Service file quadify.service not found in /home/$INSTALL_USER/Quadify/service."
         exit 1
     fi
 
-    # Reload systemd daemon to recognize the new service
     run_command "systemctl daemon-reload"
-
-    # Enable and start the service
     run_command "systemctl enable quadify.service"
     run_command "systemctl start quadify.service"
 
@@ -318,9 +327,9 @@ setup_main_service() {
 #   Update MPD Configuration
 # ============================
 configure_mpd() {
-    log_progress "Configuring MPD for CAVA..."
+    log_progress "Configuring MPD for CAVA in moOde..."
 
-    MPD_CONF_FILE="/volumio/app/plugins/music_service/mpd/mpd.conf.tmpl"
+    MPD_OVERRIDE_FILE="/etc/mpd.conf"
     FIFO_OUTPUT="
 audio_output {
     type            \"fifo\"
@@ -329,20 +338,26 @@ audio_output {
     format          \"44100:16:2\"
 }"
 
-    # Check if the FIFO configuration already exists
-    if grep -q "path.*\"/tmp/cava.fifo\"" "$MPD_CONF_FILE"; then
+    if [ ! -f "$MPD_OVERRIDE_FILE" ]; then
+        log_progress "Creating MPD configuration file..."
+        run_command "touch $MPD_OVERRIDE_FILE"
+    fi
+
+    if grep -q "path.*\"/tmp/cava.fifo\"" "$MPD_OVERRIDE_FILE"; then
         log_message "info" "FIFO output configuration already exists in MPD config."
     else
         log_progress "Adding FIFO output configuration to MPD config..."
-        echo "$FIFO_OUTPUT" | sudo tee -a "$MPD_CONF_FILE" > /dev/null
+        echo "$FIFO_OUTPUT" | tee -a "$MPD_OVERRIDE_FILE" >> "$LOG_FILE"
         log_message "success" "FIFO output configuration added to MPD config."
     fi
 
-    # Restart MPD to apply changes
-    run_command "sudo systemctl restart mpd"
-    log_message "success" "MPD restarted with updated configuration."
+    log_progress "Restarting MPD to apply changes..."
+    if systemctl restart mpd >> "$LOG_FILE" 2>&1; then
+        log_message "success" "MPD restarted with updated configuration."
+    else
+        log_message "error" "Failed to restart MPD. Check the configuration and try again."
+    fi
 }
-
 
 # ============================
 #   Install CAVA Dependencies and Build
@@ -360,16 +375,14 @@ install_cava_from_fork() {
     log_progress "Installing CAVA from fork..."
 
     CAVA_REPO="https://github.com/theshepherdmatt/cava.git"
-    CAVA_INSTALL_DIR="/home/volumio/cava"
+    CAVA_INSTALL_DIR="/home/$INSTALL_USER/cava"
 
-    # Check if CAVA is already installed
     if check_cava_installed; then
         log_message "info" "Skipping CAVA installation."
         return
     fi
 
-    # Install dependencies required to build CAVA
-    log_progress "Installing CAVA dependencies..."
+    log_progress "Installing CAVA build dependencies..."
     run_command "apt-get install -y \
         libfftw3-dev \
         libasound2-dev \
@@ -383,9 +396,6 @@ install_cava_from_fork() {
         pkg-config \
         libiniparser-dev"
 
-    log_message "success" "CAVA dependencies installed successfully."
-
-    # Clone the forked CAVA repository
     if [[ ! -d "$CAVA_INSTALL_DIR" ]]; then
         run_command "git clone $CAVA_REPO $CAVA_INSTALL_DIR"
         log_message "success" "Cloned CAVA repository from fork."
@@ -394,7 +404,6 @@ install_cava_from_fork() {
         run_command "cd $CAVA_INSTALL_DIR && git pull"
     fi
 
-    # Build and install CAVA
     log_progress "Building and installing CAVA..."
     run_command "cd $CAVA_INSTALL_DIR && ./autogen.sh"
     log_message "info" "autogen.sh completed"
@@ -402,26 +411,22 @@ install_cava_from_fork() {
     log_message "info" "configure completed"
     run_command "cd $CAVA_INSTALL_DIR && make"
     log_message "info" "make completed"
-    run_command "cd $CAVA_INSTALL_DIR && sudo make install"
+    run_command "cd $CAVA_INSTALL_DIR && make install"
     log_message "success" "CAVA installed successfully."
 }
-
 
 # ============================
 #   Install CAVA Configuration
 # ============================
-
 setup_cava_config() {
     log_progress "Setting up CAVA configuration..."
 
-    CONFIG_DIR="/home/volumio/.config/cava"
+    CONFIG_DIR="/home/$INSTALL_USER/.config/cava"
     CONFIG_FILE="$CONFIG_DIR/config"
-    REPO_CONFIG_FILE="/home/volumio/cava/config/default_config"
+    REPO_CONFIG_FILE="/home/$INSTALL_USER/cava/config/default_config"
 
-    # Create the configuration directory
     run_command "mkdir -p $CONFIG_DIR"
 
-    # Check if the file already exists in the destination
     if [[ ! -f $CONFIG_FILE ]]; then
         if [[ -f $REPO_CONFIG_FILE ]]; then
             log_message "info" "Copying default CAVA configuration from repository."
@@ -434,11 +439,9 @@ setup_cava_config() {
         log_message "info" "CAVA configuration already exists. Skipping copy."
     fi
 
-    # Set ownership and permissions
-    run_command "chown -R volumio:volumio $CONFIG_DIR"
+    run_command "chown -R $INSTALL_USER:$INSTALL_USER $CONFIG_DIR"
     log_message "success" "CAVA configuration setup completed."
 }
-
 
 # ============================
 #   Configure CAVA Service
@@ -447,26 +450,29 @@ setup_cava_service() {
     log_progress "Setting up the CAVA Service..."
 
     CAVA_SERVICE_FILE="/etc/systemd/system/cava.service"
+    SRC_CAVA_FILE="/home/$INSTALL_USER/Quadify/service/cava.service"
 
-    # Copy the CAVA service file from the service folder
-    if [[ -f "/home/volumio/Quadify/service/cava.service" ]]; then
-        run_command "cp /home/volumio/Quadify/service/cava.service \"$CAVA_SERVICE_FILE\""
+    if [[ -f "$SRC_CAVA_FILE" ]]; then
+        #
+        # Replace "matt" references with $INSTALL_USER in cava.service
+        #
+        run_command "sed -i \"s/User=matt/User=$INSTALL_USER/g\" \"$SRC_CAVA_FILE\""
+        run_command "sed -i \"s/Group=matt/Group=$INSTALL_USER/g\" \"$SRC_CAVA_FILE\""
+        run_command "sed -i \"s:/home/matt/.config/cava:/home/$INSTALL_USER/.config/cava:g\" \"$SRC_CAVA_FILE\""
+
+        run_command "cp \"$SRC_CAVA_FILE\" \"$CAVA_SERVICE_FILE\""
         log_message "success" "cava.service copied to $CAVA_SERVICE_FILE."
     else
-        log_message "error" "Service file cava.service not found in services directory."
+        log_message "error" "Service file cava.service not found in /home/$INSTALL_USER/Quadify/service."
         exit 1
     fi
 
-    # Reload systemd daemon to recognize the new service
     run_command "systemctl daemon-reload"
-
-    # Enable and start the CAVA service
     run_command "systemctl enable cava.service"
     run_command "systemctl start cava.service"
 
     log_message "success" "CAVA Service has been enabled and started."
 }
-
 
 # ============================
 #   Configure Buttons and LEDs
@@ -474,22 +480,18 @@ setup_cava_service() {
 configure_buttons_leds() {
     log_progress "Configuring Buttons and LEDs activation..."
 
-    # Path to main.py
-    MAIN_PY_PATH="/home/volumio/Quadify/src/main.py"
+    MAIN_PY_PATH="/home/$INSTALL_USER/Quadify/src/main.py"
 
-    # Check if main.py exists
     if [[ ! -f "$MAIN_PY_PATH" ]]; then
-        log_message "error" "main.py not found at $MAIN_PY_PATH. Please ensure the path is correct."
+        log_message "error" "main.py not found at $MAIN_PY_PATH."
         exit 1
     fi
 
-    # Prompt the user
     while true; do
         read -rp "Do you need buttons and LEDs activated? (y/n): " yn
         case $yn in
             [Yy]* )
                 log_message "info" "Buttons and LEDs will be activated."
-                # Uncomment the initialization line
                 if grep -q "^[#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
                     sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^#//' "$MAIN_PY_PATH"
                     log_message "success" "Activated 'buttons_leds = ButtonsLEDController(...)' in main.py."
@@ -497,7 +499,6 @@ configure_buttons_leds() {
                     log_message "info" "'buttons_leds = ButtonsLEDController(...)' is already active in main.py."
                 fi
 
-                # Uncomment the start line
                 if grep -q "^[#]*\s*buttons_leds.start()" "$MAIN_PY_PATH"; then
                     sed -i.bak '/buttons_leds.start()/ s/^#//' "$MAIN_PY_PATH"
                     log_message "success" "Activated 'buttons_leds.start()' in main.py."
@@ -508,18 +509,14 @@ configure_buttons_leds() {
                 ;;
             [Nn]* )
                 log_message "info" "Buttons and LEDs will be deactivated."
-                # Comment out the initialization line by adding a '#'
                 if grep -q "^[^#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
-                    # Add '#' after leading spaces
                     sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
                     log_message "success" "Deactivated 'buttons_leds = ButtonsLEDController(...)' in main.py."
                 else
                     log_message "info" "'buttons_leds = ButtonsLEDController(...)' is already deactivated in main.py."
                 fi
 
-                # Comment out the start line by adding a '#'
                 if grep -q "^[^#]*\s*buttons_leds.start()" "$MAIN_PY_PATH"; then
-                    # Add '#' after leading spaces
                     sed -i.bak '/buttons_leds.start()/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
                     log_message "success" "Deactivated 'buttons_leds.start()' in main.py."
                 else
@@ -542,10 +539,10 @@ configure_buttons_leds() {
 set_permissions() {
     log_progress "Setting ownership and permissions of project directory..."
 
-    run_command "chown -R volumio:volumio /home/volumio/Quadify"
-    run_command "chmod -R 755 /home/volumio/Quadify"
+    run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quadify"
+    run_command "chmod -R 755 /home/$INSTALL_USER/Quadify"
 
-    log_message "success" "Ownership and permissions set to volumio user."
+    log_message "success" "Ownership and permissions set for /home/$INSTALL_USER/Quadify."
 }
 
 # ============================
@@ -562,11 +559,9 @@ main() {
     detect_i2c_address
     setup_main_service
 
-    # Update MPD configuration
     configure_mpd
     echo "DEBUG: Finished installing MPD"
 
-    # Install CAVA and configure its service
     install_cava_from_fork
     echo "DEBUG: Finished installing CAVA from fork"
 
@@ -576,13 +571,12 @@ main() {
     setup_cava_service
     echo "DEBUG: Finished installing CAVA Service"
 
-    # Add the new configuration step here
     configure_buttons_leds
 
-    # Add the Samba setup step
     setup_samba
 
     set_permissions
+
     log_message "success" "Installation complete. Please verify the setup."
 }
 

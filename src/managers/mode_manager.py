@@ -14,11 +14,8 @@ class ModeManager:
         {'name': 'menu', 'on_enter': 'enter_menu'},
         {'name': 'radio', 'on_enter': 'enter_radio_manager'},
         {'name': 'playlists', 'on_enter': 'enter_playlists'},
-        {'name': 'tidal', 'on_enter': 'enter_tidal'},
-        {'name': 'qobuz', 'on_enter': 'enter_qobuz'},
         {'name': 'library', 'on_enter': 'enter_library'},
         {'name': 'usblibrary', 'on_enter': 'enter_usb_library'},
-        {'name': 'spotify', 'on_enter': 'enter_spotify'},
         {'name': 'original', 'on_enter': 'enter_original'},
         {'name': 'modern', 'on_enter': 'enter_modern'},
     ]
@@ -27,7 +24,7 @@ class ModeManager:
         self,
         display_manager,
         clock,
-        volumio_listener,
+        moode_listener,
         preference_file_path="screen_preference.json"
     ):
         # Initialize logger FIRST
@@ -37,7 +34,7 @@ class ModeManager:
 
         self.display_manager = display_manager
         self.clock = clock
-        self.volumio_listener = volumio_listener
+        self.moode_listener = moode_listener
         self.preference_file_path = os.path.join(os.path.dirname(__file__), preference_file_path)
 
         # Load persisted preferences after logger is ready
@@ -49,11 +46,8 @@ class ModeManager:
         self.playlist_manager = None
         self.radio_manager = None
         self.webradio_screen = None
-        self.tidal_manager = None
-        self.qobuz_manager = None
         self.library_manager = None
         self.usb_library_manager = None
-        self.spotify_manager = None
         self.modern_screen = None
 
         self.logger.debug("ModeManager: Initializing state machine...")
@@ -72,12 +66,9 @@ class ModeManager:
         self.machine.add_transition(trigger='to_menu', source='*', dest='menu')
         self.machine.add_transition(trigger='to_radio', source='*', dest='radio')
         self.machine.add_transition(trigger='to_playlists', source='*', dest='playlists')
-        self.machine.add_transition(trigger='to_tidal', source='*', dest='tidal')
-        self.machine.add_transition(trigger='to_qobuz', source='*', dest='qobuz')
         self.machine.add_transition(trigger='to_library', source='*', dest='library')
         self.machine.add_transition(trigger='to_usb_library', source='*', dest='usblibrary')
         self.machine.add_transition(trigger='to_clock', source='*', dest='clock')
-        self.machine.add_transition(trigger='to_spotify', source='*', dest='spotify')
         self.machine.add_transition(trigger='to_original', source='*', dest='original')
         self.machine.add_transition(trigger='to_modern', source='*', dest='modern')
 
@@ -88,12 +79,12 @@ class ModeManager:
         # Suppression mechanism
         self.suppress_state_changes = False  # Added suppression flag
 
-        # Connect to VolumioListener's state_changed signal
-        if self.volumio_listener is not None:
-            self.volumio_listener.state_changed.connect(self.process_state_change)
-            self.logger.debug("ModeManager: Connected to VolumioListener's state_changed signal.")
+        # Connect to moodeListener's state_changed signal
+        if self.moode_listener is not None:
+            self.moode_listener.state_changed.connect(self.process_state_change)
+            self.logger.debug("ModeManager: Connected to moodeListener's state_changed signal.")
         else:
-            self.logger.warning("ModeManager: VolumioListener is None, cannot connect to state_changed signal.")
+            self.logger.warning("ModeManager: moodeListener is None, cannot connect to state_changed signal.")
 
         # Explicitly call enter_clock to initialize the clock mode
         self.enter_clock(None)
@@ -166,20 +157,11 @@ class ModeManager:
     def set_radio_manager(self, radio_manager):
         self.radio_manager = radio_manager
 
-    def set_tidal_manager(self, tidal_manager):
-        self.tidal_manager = tidal_manager
-
-    def set_qobuz_manager(self, qobuz_manager):
-        self.qobuz_manager = qobuz_manager
-
     def set_library_manager(self, library_manager):
         self.library_manager = library_manager
 
     def set_usb_library_manager(self, usb_library_manager):
         self.usb_library_manager = usb_library_manager
-
-    def set_spotify_manager(self, spotify_manager):
-        self.spotify_manager = spotify_manager
 
     def set_modern_screen(self, modern_screen):
         self.modern_screen = modern_screen
@@ -201,15 +183,6 @@ class ModeManager:
         if self.playlist_manager and self.playlist_manager.is_active:
             self.playlist_manager.stop_mode()
             self.logger.info("ModeManager: Stopped playlist mode.")
-        if self.tidal_manager and self.tidal_manager.is_active:
-            self.tidal_manager.stop_mode()
-            self.logger.info("ModeManager: Stopped Tidal mode.")
-        if self.qobuz_manager and self.qobuz_manager.is_active:
-            self.qobuz_manager.stop_mode()
-            self.logger.info("ModeManager: Stopped Qobuz mode.")
-        if self.spotify_manager and self.spotify_manager.is_active:
-            self.spotify_manager.stop_mode()
-            self.logger.info("ModeManager: Stopped Spotify mode.")
         if self.library_manager and self.library_manager.is_active:
             self.library_manager.stop_mode()
             self.logger.info("ModeManager: Stopped Library mode.")
@@ -348,44 +321,6 @@ class ModeManager:
             self.logger.error("ModeManager: playlist_manager is not set.")
 
 
-    def enter_tidal(self, event):
-        self.logger.info("ModeManager: Entering Tidal mode.")
-        # Stop other modes
-        if self.clock:
-            self.clock.stop()
-            self.logger.info("ModeManager: Clock stopped.")
-        else:
-            self.logger.error("ModeManager: Clock instance is not set.")
-        if self.menu_manager and self.menu_manager.is_active:
-            self.menu_manager.stop_mode()
-            self.logger.info("ModeManager: Stopped menu mode.")
-        # Start Tidal
-        if self.tidal_manager:
-            self.tidal_manager.start_mode()
-            self.logger.info("ModeManager: Tidal mode started.")
-        else:
-            self.logger.error("ModeManager: tidal_manager is not set.")
-
-
-    def enter_qobuz(self, event):
-        self.logger.info("ModeManager: Entering Qobuz mode.")
-        # Stop other modes
-        if self.clock:
-            self.clock.stop()
-            self.logger.info("ModeManager: Clock stopped.")
-        else:
-            self.logger.error("ModeManager: Clock instance is not set.")
-        if self.menu_manager and self.menu_manager.is_active:
-            self.menu_manager.stop_mode()
-            self.logger.info("ModeManager: Stopped menu mode.")
-        # Start Qobuz
-        if self.qobuz_manager:
-            self.qobuz_manager.start_mode()
-            self.logger.info("ModeManager: Qobuz mode started.")
-        else:
-            self.logger.error("ModeManager: qobuz_manager is not set.")
-
-
     def enter_library(self, event):
         start_uri = event.kwargs.get('start_uri', None)
         self.logger.info(f"ModeManager: Entering Library mode with start_uri: {start_uri}")
@@ -424,25 +359,6 @@ class ModeManager:
             self.logger.info("ModeManager: USB Library mode started.")
         else:
             self.logger.error("ModeManager: usb_library_manager is not set.")
-
-
-    def enter_spotify(self, event):
-        self.logger.info("ModeManager: Entering Spotify mode.")
-        # Stop other modes
-        if self.clock:
-            self.clock.stop()
-            self.logger.info("ModeManager: Clock stopped.")
-        else:
-            self.logger.error("ModeManager: Clock instance is not set.")
-        if self.menu_manager and self.menu_manager.is_active:
-            self.menu_manager.stop_mode()
-            self.logger.info("ModeManager: Stopped menu mode.")
-        # Start Spotify
-        if self.spotify_manager:
-            self.spotify_manager.start_mode()
-            self.logger.info("ModeManager: Spotify mode started.")
-        else:
-            self.logger.error("ModeManager: spotify_manager is not set.")
 
 
     def enter_original(self, event):
@@ -515,16 +431,39 @@ class ModeManager:
         return self.suppress_state_changes
 
     def process_state_change(self, sender, state, **kwargs):
-        """Process playback state changes from Volumio."""
         with self.lock:
             if self.suppress_state_changes:
                 self.logger.debug("ModeManager: State change suppressed.")
                 return
 
-            # Extract current status and service
-            status = state.get("status", "").lower()
-            service = state.get("service", "").lower()
-            self.logger.debug(f"ModeManager: Processing state change, Volumio status: {status}, service: {service}")
+            # Log the entire state for debugging
+            self.logger.debug(f"ModeManager: Received state: {state}")
+
+            # Extract 'status' from state
+            status_dict = state.get("status", {})
+            service_list = state.get("service", [])
+
+            # Extract the 'state' from status_dict
+            status = status_dict.get("state", "").lower()
+            if not isinstance(status, str):
+                self.logger.error("ModeManager: 'state' is missing or not a string.")
+                return
+
+            # Determine the active service
+            active_service = 'default'  # Fallback if no service is active
+            for service in service_list:
+                outputname = service.get("outputname", "")
+                outputenabled = service.get("outputenabled", "0")
+                self.logger.debug(f"ModeManager: Service - Output Name: {outputname}, Enabled: {outputenabled}")
+                if outputenabled == "1" and outputname:
+                    if isinstance(outputname, str):
+                        active_service = outputname.lower()
+                        break  # Assume only one active service
+                    else:
+                        self.logger.warning(f"ModeManager: 'outputname' is not a string: {outputname}")
+                        active_service = 'default'
+
+            self.logger.debug(f"ModeManager: Processing state change, moode status: {status}, service: {active_service}")
 
             # Update status tracking
             self.previous_status = self.current_status
@@ -538,7 +477,7 @@ class ModeManager:
                 self._handle_track_resumed()
 
             # Handle global playback states
-            self._handle_playback_states(status, service)
+            self._handle_playback_states(status, active_service)
 
         self.logger.debug("ModeManager: Completed state change processing.")
 

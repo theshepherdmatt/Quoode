@@ -7,9 +7,9 @@ import threading
 import time
 
 class MenuManager:
-    def __init__(self, display_manager, volumio_listener, mode_manager, window_size=5, menu_type="icon_row"):
+    def __init__(self, display_manager, moode_listener, mode_manager, window_size=5, menu_type="icon_row"):
         self.display_manager = display_manager
-        self.volumio_listener = volumio_listener
+        self.moode_listener = moode_listener
         self.mode_manager = mode_manager
 
         # Initialize logger
@@ -115,7 +115,7 @@ class MenuManager:
                     icon = background
 
                 # Resize the icon with anti-aliasing
-                icon = icon.resize((icon_size, icon_size), Image.ANTIALIAS)
+                icon = icon.resize((icon_size, icon_size), Image.LANCZOS)
 
                 # Calculate x-coordinate for the current icon
                 x = x_offset + i * (icon_size + spacing)
@@ -146,7 +146,7 @@ class MenuManager:
                     text_color = "white"  # Consistent color for selected text
 
                     # Calculate text size
-                    text_width, text_height = draw_obj.textsize(label, font=font)
+                    text_width = draw_obj.textlength(label, font=font)
                     text_x = x + (icon_size - text_width) // 2
                     text_y = y_position + icon_size + 5  # Increased vertical gap for text
 

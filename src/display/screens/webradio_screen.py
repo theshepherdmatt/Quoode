@@ -10,16 +10,16 @@ from io import BytesIO
 import threading
 
 class WebRadioScreen(BaseManager):
-    def __init__(self, display_manager, volumio_listener, mode_manager):
-        super().__init__(display_manager, volumio_listener, mode_manager)
+    def __init__(self, display_manager, moode_listener, mode_manager):
+        super().__init__(display_manager, moode_listener, mode_manager)
         self.mode_manager = mode_manager
         self.display_manager = display_manager
-        self.volumio_listener = volumio_listener
+        self.moode_listener = moode_listener
         self.logger = logging.getLogger(self.__class__.__name__)
         self.is_active = False  # Initialize is_active as False
 
-        self.local_album_art_path = "/home/volumio/Quadify/src/assets/images/webradio.png"
-        self.cache_dir = "/home/volumio/Quadify/src/cache/album_art"
+        self.local_album_art_path = "/home/matt/Quadify/src/assets/images/webradio.png"
+        self.cache_dir = "/home/matt/Quadify/src/cache/album_art"
         os.makedirs(self.cache_dir, exist_ok=True)
 
         # Load the local BMP fallback album art once during initialization
@@ -40,12 +40,12 @@ class WebRadioScreen(BaseManager):
         self.update_thread.start()
         self.logger.info("WebRadioScreen: Started background update thread.")
 
-        # Register a callback for Volumio state changes
-        self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
+        # Register a callback for moode state changes
+        self.moode_listener.state_changed.connect(self.on_moode_state_change)
         self.logger.info("WebRadioScreen initialized.")
 
-    def on_volumio_state_change(self, sender, state):
-        """Handle state changes from Volumio."""
+    def on_moode_state_change(self, sender, state):
+        """Handle state changes from moode."""
         if state.get("service", "").lower() != "webradio":
             self.logger.debug("WebRadioScreen: Ignoring state change for non-webradio service.")
             return
@@ -201,7 +201,7 @@ class WebRadioScreen(BaseManager):
         self.draw_volume_bars(draw, volume)
 
     def draw_display(self, data):
-        """Draw the display based on the Volumio state."""
+        """Draw the display based on the moode state."""
         if not self.is_active:
             self.logger.info("WebRadioScreen: draw_display called, but mode is not active.")
             return
@@ -223,7 +223,7 @@ class WebRadioScreen(BaseManager):
             self.logger.info("WebRadioScreen: display_radioplayback_info called, but mode is not active.")
             return
         
-        current_state = self.volumio_listener.get_current_state()
+        current_state = self.moode_listener.get_current_state()
         if current_state:
             self.draw_display(current_state)
         else:

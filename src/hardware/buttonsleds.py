@@ -31,7 +31,7 @@ class LED(IntEnum):
     LED8 = 0b00000001  # GPIOA0 - Button 6 LED
 
 class ButtonsLEDController:
-    def __init__(self, volumio_listener, config_path='config.yaml', debounce_delay=0.1):
+    def __init__(self, moode_listener, config_path='config.yaml', debounce_delay=0.1):
         # Configure the logger
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.ERROR)  # Set to DEBUG for comprehensive logging
@@ -60,7 +60,7 @@ class ButtonsLEDController:
         self.debounce_delay = debounce_delay
         self.prev_button_state = [[1, 1], [1, 1], [1, 1], [1, 1]]
         self.button_map = [[1, 2], [3, 4], [5, 6], [7, 8]]
-        self.volumio_listener = volumio_listener
+        self.moode_listener = moode_listener
         self.status_led_state = 0
         self.current_button_led_state = 0
         self.current_led_state = 0
@@ -71,8 +71,8 @@ class ButtonsLEDController:
         # Initialize MCP23017
         self._initialize_mcp23017()
 
-        # Register callbacks with Volumio listener
-        self.register_volumio_callbacks()
+        # Register callbacks with moode listener
+        self.register_moode_callbacks()
 
     def _load_mcp_address(self, config_path):
         self.logger.debug(f"Loading MCP23017 address from config file: {config_path}")
@@ -125,28 +125,28 @@ class ButtonsLEDController:
             self.logger.error(f"Error initializing MCP23017: {e}")
             self.bus = None  # Disable bus to prevent further operations
 
-    def register_volumio_callbacks(self):
-        self.logger.debug("Registering Volumio callbacks.")
+    def register_moode_callbacks(self):
+        self.logger.debug("Registering moode callbacks.")
         try:
-            self.volumio_listener.state_changed.connect(self.on_state)
-            self.volumio_listener.connected.connect(self.on_connect)
-            self.volumio_listener.disconnected.connect(self.on_disconnect)
-            self.logger.debug("Volumio callbacks registered successfully.")
+            self.moode_listener.state_changed.connect(self.on_state)
+            self.moode_listener.connected.connect(self.on_connect)
+            self.moode_listener.disconnected.connect(self.on_disconnect)
+            self.logger.debug("moode callbacks registered successfully.")
         except AttributeError as e:
-            self.logger.error(f"Volumio listener does not have the required attributes: {e}")
+            self.logger.error(f"moode listener does not have the required attributes: {e}")
 
     def on_connect(self, sender, **kwargs):
-        self.logger.info("Connected to Volumio via SocketIO.")
+        self.logger.info("Connected to moode via SocketIO.")
 
     def on_disconnect(self, sender, **kwargs):
-        self.logger.warning("Disconnected from Volumio's SocketIO server.")
+        self.logger.warning("Disconnected from moode's SocketIO server.")
 
     def on_state(self, sender, state):
         new_status = state.get("status")
-        if new_status:
-            self.logger.debug(f"Volumio status changed to: {new_status.upper()}")
+        if isinstance(new_status, str):  # Check if it's a string
+            self.logger.debug(f"moode status changed to: {new_status.upper()}")
         else:
-            self.logger.warning("Received state change with no status.")
+            self.logger.warning(f"Received state change with non-string status: {new_status} ({type(new_status)})")
         self.update_status_leds(new_status)
 
     def start(self):
@@ -235,28 +235,28 @@ class ButtonsLEDController:
             self.current_button_led_state = 0
 
             if button_id == 1:
-                self.volumio_listener.socketIO.emit('pause')
-                self.logger.debug("Emitted 'pause' command to Volumio.")
-                # Play/Pause LEDs are handled via Volumio state
+                self.moode_listener.socketIO.emit('pause')
+                self.logger.debug("Emitted 'pause' command to moode.")
+                # Play/Pause LEDs are handled via moode state
             elif button_id == 2:
-                self.volumio_listener.socketIO.emit('play')
-                self.logger.debug("Emitted 'play' command to Volumio.")
-                # Play/Pause LEDs are handled via Volumio state
+                self.moode_listener.socketIO.emit('play')
+                self.logger.debug("Emitted 'play' command to moode.")
+                # Play/Pause LEDs are handled via moode state
             elif button_id == 3:
-                self.volumio_listener.socketIO.emit('next')
-                self.logger.debug("Emitted 'next' command to Volumio.")
+                self.moode_listener.socketIO.emit('next')
+                self.logger.debug("Emitted 'next' command to moode.")
                 led_to_light = LED.LED4
             elif button_id == 4:
-                self.volumio_listener.socketIO.emit('previous')
-                self.logger.debug("Emitted 'previous' command to Volumio.")
+                self.moode_listener.socketIO.emit('previous')
+                self.logger.debug("Emitted 'previous' command to moode.")
                 led_to_light = LED.LED3
             elif button_id == 5:
-                self.volumio_listener.socketIO.emit('repeat')
-                self.logger.debug("Emitted 'repeat' command to Volumio.")
+                self.moode_listener.socketIO.emit('repeat')
+                self.logger.debug("Emitted 'repeat' command to moode.")
                 led_to_light = LED.LED5
             elif button_id == 6:
-                self.volumio_listener.socketIO.emit('random')
-                self.logger.debug("Emitted 'random' command to Volumio.")
+                self.moode_listener.socketIO.emit('random')
+                self.logger.debug("Emitted 'random' command to moode.")
                 led_to_light = LED.LED6
             elif button_id == 7:
                 self.logger.info("Add to favourites functionality not implemented yet.")

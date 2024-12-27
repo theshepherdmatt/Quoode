@@ -44,7 +44,7 @@ class DisplayManager:
         # Define the services and load their corresponding icons (excluding 'default')
         services = ["stream", "library", "playlists", "qobuz", "tidal", "spop", "spotify",
                     "webradio", "mpd", "nas", "usb", "display", "volume"]
-        icon_dir = self.config.get('icon_dir', "/home/volumio/Quadify/src/assets/images")
+        icon_dir = self.config.get('icon_dir', "/home/matt/Quadify/src/assets/images")
 
         for service in services:
             icon_path = os.path.join(icon_dir, f"{service}.png")
@@ -73,7 +73,7 @@ class DisplayManager:
 
     def load_default_icon(self):
         """Loads the default icon from the specified path."""
-        icon_dir = self.config.get('icon_dir', "/home/volumio/Quadify/src/assets/images")
+        icon_dir = self.config.get('icon_dir', "/home/matt/Quadify/src/assets/images")
         default_icon_path = os.path.join(icon_dir, "default.png")
         try:
             icon = Image.open(default_icon_path)

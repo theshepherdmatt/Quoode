@@ -10,9 +10,11 @@ import os
 FIFO_PATH = "/tmp/display.fifo"  # Path to the FIFO for CAVA
 
 class ModernScreen(BaseManager):
-    def __init__(self, display_manager, volumio_listener, mode_manager):
-        super().__init__(display_manager, volumio_listener, mode_manager)
-        self.mode_name = "modern"  # Use "modern" to align with ModeManager's state
+    def __init__(self, display_manager, moode_listener, mode_manager):
+        super().__init__(display_manager, moode_listener, mode_manager)
+        self.moode_listener = moode_listener  # Explicitly assign moode_listener
+        self.mode_manager = mode_manager
+        self.mode_name = "modern"  # Align with ModeManager's state
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG)
         self.spectrum_bars = []
@@ -42,8 +44,8 @@ class ModernScreen(BaseManager):
         self.update_thread.start()
         self.logger.info("ModernScreen: Started background update thread.")
 
-        # Volumio state change listener
-        self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
+        # moode state change listener
+        self.moode_listener.state_changed.connect(self.on_moode_state_change)
         self.logger.info("ModernScreen initialized.")
 
     def _read_fifo(self):
@@ -58,6 +60,7 @@ class ModernScreen(BaseManager):
                 while self.running_spectrum:
                     line = fifo.readline().strip()
                     if line:
+                        # Assuming spectrum data is semicolon-separated integers
                         bars = [int(x) for x in line.split(";") if x.isdigit()]
                         self.spectrum_bars = bars
         except Exception as e:
@@ -92,7 +95,18 @@ class ModernScreen(BaseManager):
 
     def update_scroll(self, text, font, max_width, scroll_offset):
         """Update scrolling offset for continuous scrolling."""
-        text_width, _ = font.getsize(text)
+        # Use getlength instead of getsize to obtain text width
+        try:
+            text_width = font.getlength(text)
+        except AttributeError:
+            # Fallback for older Pillow versions
+            bbox = font.getbbox(text)
+            if bbox:
+                text_width = bbox[2] - bbox[0]
+            else:
+                text_width = 0
+
+        self.logger.debug(f"update_scroll: text='{text}', text_width={text_width}, max_width={max_width}, scroll_offset={scroll_offset}")
 
         # If the text width is less than the max width, no need to scroll
         if text_width <= max_width:
@@ -120,11 +134,17 @@ class ModernScreen(BaseManager):
                         self.latest_state = None
                         last_update_time = time.time()  # Reset time for smooth progress
                         self.update_event.clear()
-                elif self.current_state and "seek" in self.current_state and "duration" in self.current_state:
+                        self.logger.debug("update_display_loop: State updated from latest_state.")
+                elif self.current_state and "elapsed" in self.current_state and "duration" in self.current_state:
                     # Simulate seek progress
                     elapsed_time = time.time() - last_update_time
-                    self.current_state["seek"] += int(elapsed_time * 1000)  # Increment seek by elapsed ms
-                    last_update_time = time.time()
+                    try:
+                        self.current_state["elapsed"] = float(self.current_state["elapsed"]) + elapsed_time
+                        last_update_time = time.time()
+                        self.logger.debug(f"update_display_loop: Incremented elapsed by {elapsed_time:.3f}s to {self.current_state['elapsed']:.3f}s.")
+                    except ValueError as e:
+                        self.logger.error(f"ModernScreen: Error updating elapsed time - {e}")
+                        self.current_state["elapsed"] = 0.0
 
             # Check if mode_manager mode is 'modern'
             if self.is_active and self.mode_manager.get_mode() == "modern" and self.current_state:
@@ -146,24 +166,58 @@ class ModernScreen(BaseManager):
         # Extract information
         song_title = data.get("title", "Unknown Title")
         artist_name = data.get("artist", "Unknown Artist")
-        seek = data.get("seek", 0) / 1000  # Convert from ms to seconds
-        duration = data.get("duration", 1)  # Avoid division by zero
-        progress = max(0, min(seek / duration, 1))
-        service = data.get("service", "default")
-        samplerate = data.get("samplerate", "N/A")
-        bitdepth = data.get("bitdepth", "N/A")
-        volume = data.get("volume", 50)
+        elapsed_str = data.get("elapsed", "0")  # '41.426'
+        duration_str = data.get("duration", "1")  # '243.800'
+        service = data.get("current_service", "default").lower()
+        status = data.get("status", {})
+        audio_info = status.get("audio", "N/A")
+        samplerate = audio_info.split(":")[0] if isinstance(audio_info, str) and ':' in audio_info else "N/A"
+        bitdepth = audio_info.split(":")[1] if isinstance(audio_info, str) and ':' in audio_info else "N/A"
+        volume = int(data.get("volume", 50))  # Ensure volume is an integer
 
-        # Convert seek and duration to mm:ss format
-        current_minutes = int(seek // 60)
-        current_seconds = int(seek % 60)
+        # Format samplerate and bitdepth
+        if samplerate != "N/A":
+            try:
+                samplerate_khz = f"{int(samplerate)/1000:.1f}kHz"
+            except ValueError:
+                self.logger.error(f"ModernScreen: Invalid samplerate value '{samplerate}'. Setting to 'N/A'.")
+                samplerate_khz = "N/A"
+        else:
+            samplerate_khz = "N/A"
+
+        if bitdepth != "N/A":
+            try:
+                bitdepth_bit = f"{int(bitdepth)}bit"
+            except ValueError:
+                self.logger.error(f"ModernScreen: Invalid bitdepth value '{bitdepth}'. Setting to 'N/A'.")
+                bitdepth_bit = "N/A"
+        else:
+            bitdepth_bit = "N/A"
+
+        info_text = f"{samplerate_khz} / {bitdepth_bit}"
+        self.logger.debug(f"Formatted info_text: '{info_text}'")
+
+        # Convert 'elapsed' and 'duration' to float
+        try:
+            elapsed = float(elapsed_str)
+            duration = float(duration_str)
+        except (ValueError, TypeError) as e:
+            self.logger.error(f"ModernScreen: Error converting time strings to float - {e}")
+            elapsed = 0.0
+            duration = 1.0  # Avoid division by zero
+
+        progress = max(0, min(elapsed / duration, 1))
+
+        # Convert elapsed and duration to mm:ss format
+        current_minutes = int(elapsed // 60)
+        current_seconds = int(elapsed % 60)
         total_minutes = int(duration // 60)
         total_seconds = int(duration % 60)
         current_time = f"{current_minutes}:{current_seconds:02d}"
         total_duration = f"{total_minutes}:{total_seconds:02d}"
 
         self.logger.debug(
-            f"ModernScreen: Progress bar data: seek={seek:.2f}s, duration={duration}s, progress={progress:.2%}"
+            f"ModernScreen: Progress bar data: elapsed={elapsed:.2f}s, duration={duration}s, progress={progress:.2%}"
         )
 
         screen_width = self.display_manager.oled.width
@@ -187,7 +241,12 @@ class ModernScreen(BaseManager):
         artist_display, self.scroll_offset_artist, artist_scrolling = self.update_scroll(
             artist_name, self.font_artist, max_text_width, self.scroll_offset_artist
         )
-        artist_x = (screen_width // 2) - self.scroll_offset_artist if artist_scrolling else (screen_width - self.font_artist.getsize(artist_display)[0]) // 2
+        if artist_scrolling:
+            artist_x = (screen_width // 2) - self.scroll_offset_artist
+        else:
+            bbox = self.font_artist.getbbox(artist_display)
+            text_width = bbox[2] - bbox[0] if bbox else 0
+            artist_x = (screen_width - text_width) // 2
         artist_y = positions["artist"]["y"]
 
         draw.text((artist_x, artist_y), artist_display, font=self.font_artist, fill="white")
@@ -197,19 +256,23 @@ class ModernScreen(BaseManager):
         title_display, self.scroll_offset_title, title_scrolling = self.update_scroll(
             song_title, self.font_title, max_text_width, self.scroll_offset_title
         )
-        title_x = (screen_width // 2) - self.scroll_offset_title if title_scrolling else (screen_width - self.font_title.getsize(title_display)[0]) // 2
+        if title_scrolling:
+            title_x = (screen_width // 2) - self.scroll_offset_title
+        else:
+            bbox = self.font_title.getbbox(title_display)
+            text_width = bbox[2] - bbox[0] if bbox else 0
+            title_x = (screen_width - text_width) // 2
         title_y = positions["title"]["y"] - 2
 
         draw.text((title_x, title_y), title_display, font=self.font_title, fill="white")
         self.logger.debug(f"ModernScreen: Title displayed at position ({title_x}, {title_y}).")
 
         # Sample rate and bit depth
-        info_text = f"{samplerate} / {bitdepth}"
-        info_width, info_height = self.font_info.getsize(info_text)
+        info_width = self.font_info.getlength(info_text) if hasattr(self.font_info, 'getlength') else (self.font_info.getbbox(info_text)[2] - self.font_info.getbbox(info_text)[0])
         info_x = (screen_width - info_width) // 2
         info_y = positions["info"]["y"] - 6
         draw.text((info_x, info_y), info_text, font=self.font_info, fill="white")
-        self.logger.debug(f"ModernScreen: Info displayed at position ({info_x}, {info_y}).")
+        self.logger.debug(f"ModernScreen: Info displayed at position ({info_x}, {info_y}). Text: '{info_text}'")
 
         # Volume icon and text
         volume_icon = self.display_manager.icons.get('volume', self.display_manager.default_icon)
@@ -219,10 +282,10 @@ class ModernScreen(BaseManager):
         base_image.paste(volume_icon, (volume_icon_x, volume_icon_y))
 
         volume_text = f"{volume}"
-        volume_text_x = volume_icon_x + 10
+        volume_text_x = volume_icon_x + 12  # Adjusted to prevent overlapping
         volume_text_y = volume_icon_y - 2
         draw.text((volume_text_x, volume_text_y), volume_text, font=self.font_info, fill="white")
-        self.logger.debug(f"ModernScreen: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}).")
+        self.logger.debug(f"ModernScreen: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}). Text: '{volume_text}'")
 
         # Progress bar and times
         draw.text((progress_x - 30, progress_y - 9), current_time, font=self.font_info, fill="white")
@@ -244,8 +307,8 @@ class ModernScreen(BaseManager):
         self.display_manager.oled.display(base_image)
         self.logger.info("Updated display with playback details and spectrum visualisation.")
 
-    def on_volumio_state_change(self, sender, state):
-        """Handle state changes from Volumio."""
+    def on_moode_state_change(self, sender, state, **kwargs):
+        """Handle state changes from moode."""
         # Process only if active and mode is 'modern'
         if not self.is_active or self.mode_manager.get_mode() != "modern":
             self.logger.debug("ModernScreen: Ignoring state change; not active or wrong mode.")
@@ -277,6 +340,7 @@ class ModernScreen(BaseManager):
             self.stop_event.clear()
             self.update_thread = threading.Thread(target=self.update_display_loop, daemon=True)
             self.update_thread.start()
+            self.logger.debug("ModernScreen: Update thread restarted.")
 
     def stop_mode(self):
         """Deactivate ModernScreen mode and stop spectrum visualisation."""
@@ -296,14 +360,77 @@ class ModernScreen(BaseManager):
         # Stop update thread
         if self.update_thread.is_alive():
             self.update_thread.join(timeout=1)
+            self.logger.debug("ModernScreen: Update thread stopped.")
 
         self.display_manager.clear_screen()
         self.logger.info("ModernScreen: ModernScreen mode stopped and screen cleared.")
 
     def display_playback_info(self):
         """Display playback information from the current state."""
-        current_state = self.volumio_listener.get_current_state()
+        current_state = self.moode_listener.get_current_state()
         if current_state:
             self.draw_display(current_state)
         else:
             self.logger.warning("ModernScreen: No current state available.")
+
+    # Optional: Add methods for playback controls if needed
+    def toggle_play_pause(self):
+        """Emit the play/pause command to moode."""
+        self.logger.info("ModernScreen: Toggling play/pause.")
+        if not self.moode_listener.is_connected():
+            self.logger.warning("ModernScreen: Cannot toggle playback - not connected to moode.")
+            self.display_error_message("Connection Error", "Not connected to moode.")
+            return
+
+        try:
+            # Use MoodeListener's MPDClient to toggle play/pause
+            current_state = self.moode_listener.client.status().get('state', 'stop')
+            if current_state == 'play':
+                self.moode_listener.client.pause(1)
+                self.logger.info("ModernScreen: Playback paused.")
+            else:
+                self.moode_listener.client.play()
+                self.logger.info("ModernScreen: Playback started.")
+        except Exception as e:
+            self.logger.error(f"ModernScreen: Failed to toggle play/pause - {e}")
+            self.display_error_message("Playback Error", f"Could not toggle playback: {e}")
+
+    def display_error_message(self, title, message):
+        """Display an error message on the OLED screen."""
+        with self.display_manager.lock:
+            image = Image.new("RGB", self.display_manager.oled.size, "black")
+            draw = ImageDraw.Draw(image)
+            font = self.display_manager.fonts.get('error_font', ImageFont.load_default())
+
+            # Draw title
+            try:
+                if hasattr(font, 'getlength'):
+                    title_width = font.getlength(title)
+                else:
+                    bbox = font.getbbox(title)
+                    title_width = bbox[2] - bbox[0] if bbox else 0
+            except Exception as e:
+                self.logger.error(f"ModernScreen: Error calculating title width - {e}")
+                title_width = 0
+            title_x = (self.display_manager.oled.width - title_width) // 2
+            title_y = 10
+            draw.text((title_x, title_y), title, font=font, fill="red")
+
+            # Draw message
+            try:
+                if hasattr(font, 'getlength'):
+                    message_width = font.getlength(message)
+                else:
+                    bbox = font.getbbox(message)
+                    message_width = bbox[2] - bbox[0] if bbox else 0
+            except Exception as e:
+                self.logger.error(f"ModernScreen: Error calculating message width - {e}")
+                message_width = 0
+            message_x = (self.display_manager.oled.width - message_width) // 2
+            message_y = title_y + 20  # Adjust spacing as needed
+            draw.text((message_x, message_y), message, font=font, fill="white")
+
+            # Convert to match the OLED mode before displaying
+            image = image.convert(self.display_manager.oled.mode)
+            self.display_manager.oled.display(image)
+            self.logger.info(f"Displayed error message: {title} - {message}")

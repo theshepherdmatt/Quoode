@@ -1,20 +1,16 @@
-# src/managers/original_screen.py
+# src/managers/menus/original_screen.py
 
 from managers.menus.base_manager import BaseManager
 import logging
-from PIL import Image, ImageDraw, ImageFont, UnidentifiedImageError
-import requests
-from io import BytesIO
-import hashlib
-import os
-import threading
-import time
+from PIL import Image, ImageDraw, ImageFont
 import re
+import threading
 
 class OriginalScreen(BaseManager):
-    def __init__(self, display_manager, volumio_listener, mode_manager):
-        super().__init__(display_manager, volumio_listener, mode_manager)
+    def __init__(self, display_manager, moode_listener, mode_manager):
+        super().__init__(display_manager, moode_listener, mode_manager)
         self.mode_manager = mode_manager  # Ensure this is set
+        self.moode_listener = moode_listener  # Assign the listener
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG)
 
@@ -31,13 +27,13 @@ class OriginalScreen(BaseManager):
         self.update_thread.start()
         self.logger.info("OriginalScreen: Started background update thread.")
 
-        # Register a callback for Volumio state changes
-        self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
+        # Register a callback for Moode state changes
+        self.moode_listener.state_changed.connect(self.on_moode_state_change)
         self.logger.info("OriginalScreen initialized.")
 
-    def on_volumio_state_change(self, sender, state):
+    def on_moode_state_change(self, sender, state, **kwargs):
         """
-        Callback to handle state changes from VolumioListener.
+        Callback to handle state changes from MoodeListener.
         Only process state changes when this manager is active and the mode is 'original'.
         """
         if not self.is_active or self.mode_manager.get_mode() != "original":
@@ -45,7 +41,7 @@ class OriginalScreen(BaseManager):
             return
 
         # Check if the service is webradio, and ignore it in OriginalScreen
-        if state.get("service", "").lower() == "webradio":
+        if state.get("current_service", "").lower() == "webradio":
             self.logger.debug("OriginalScreen: Ignoring state change for webradio service.")
             return
 
@@ -100,36 +96,32 @@ class OriginalScreen(BaseManager):
 
         try:
             if volume_change > 0:
-                self.volumio_listener.socketIO.emit("volume", "+")
+                self.moode_listener.set_volume('+')
                 self.logger.info("OriginalScreen: Emitted volume increase command.")
             elif volume_change < 0:
-                self.volumio_listener.socketIO.emit("volume", "-")
+                self.moode_listener.set_volume('-')
                 self.logger.info("OriginalScreen: Emitted volume decrease command.")
             else:
-                self.volumio_listener.socketIO.emit("volume", new_volume)
+                self.moode_listener.set_volume(new_volume)
                 self.logger.info(f"OriginalScreen: Emitted volume set command with value {new_volume}.")
         except Exception as e:
             self.logger.error(f"OriginalScreen: Failed to adjust volume - {e}")
+            self.display_error_message("Playback Error", f"Could not toggle playback: {e}")
 
     def display_playback_info(self):
         """Initialize playback display based on the current state."""
-        current_state = self.volumio_listener.get_current_state()
+        current_state = self.moode_listener.get_current_state()
         if current_state:
             self.draw_display(current_state)
         else:
             self.logger.warning("OriginalScreen: No current state available to display.")
 
     def draw_display(self, data):
-        """Draw the display based on the Volumio state."""
-        track_type = data.get("trackType", "").lower()
-        service = data.get("service", "").lower()
-        status = data.get("status", "").lower()
-
-        # Determine current_service
-        if service == "mpd":
-            current_service = "mpd"
-        else:
-            current_service = track_type or service or "default"
+        """Draw the display based on the Moode state."""
+        # Removed .lower() calls to prevent AttributeError
+        track_type = data.get("trackType", "")
+        current_service = data.get("current_service", "")
+        status = data.get("status", "")
 
         self.logger.debug(f"Current service: '{current_service}'")
 
@@ -203,8 +195,11 @@ class OriginalScreen(BaseManager):
         sample_rate_block_right_x = self.display_manager.oled.width - 70
         sample_rate_y = 32
 
-        num_width, _ = draw.textsize(sample_rate_num_text, font=font_sample_num)
-        unit_width, _ = draw.textsize(sample_rate_unit_text, font=font_sample_unit)
+        # Use getbbox for accurate text size measurement
+        bbox_num = self.display_manager.fonts['sample_rate'].getbbox(sample_rate_num_text)
+        num_width = bbox_num[2] - bbox_num[0] if bbox_num else 0
+        bbox_unit = self.display_manager.fonts['sample_rate_khz'].getbbox(sample_rate_unit_text)
+        unit_width = bbox_unit[2] - bbox_unit[0] if bbox_unit else 0
 
         sample_rate_num_x = sample_rate_block_right_x - unit_width - num_width - 4
         draw.text((sample_rate_num_x, sample_rate_y), sample_rate_num_text, font=font_sample_num, fill="white", anchor="lm")
@@ -288,18 +283,18 @@ class OriginalScreen(BaseManager):
         self.logger.info("OriginalScreen: Stopped playback display and cleared the screen.")
 
     def toggle_play_pause(self):
-        """Emit the play/pause command to Volumio."""
+        """Emit the play/pause command to Moode."""
         self.logger.info("OriginalScreen: Toggling play/pause.")
-        if not self.volumio_listener.is_connected():
-            self.logger.warning("OriginalScreen: Cannot toggle playback - not connected to Volumio.")
-            self.display_error_message("Connection Error", "Not connected to Volumio.")
+        if not self.moode_listener.is_connected():
+            self.logger.warning("OriginalScreen: Cannot toggle playback - not connected to Moode.")
+            self.display_error_message("Connection Error", "Not connected to Moode.")
             return
 
         try:
-            self.volumio_listener.socketIO.emit("toggle", {})
-            self.logger.debug("OriginalScreen: 'toggle' event emitted successfully.")
+            self.moode_listener.toggle_play_pause()
+            self.logger.debug("OriginalScreen: 'toggle_play_pause' method called successfully.")
         except Exception as e:
-            self.logger.error(f"OriginalScreen: Failed to emit 'toggle' event - {e}")
+            self.logger.error(f"OriginalScreen: Failed to toggle play/pause - {e}")
             self.display_error_message("Playback Error", f"Could not toggle playback: {e}")
 
     def update_playback_metrics(self, state):

@@ -3,84 +3,83 @@ pins:
   dt_pin: 5
   sw_pin: 6
 
-volumio:
+moode:
   host: localhost
-  port: 3000
-  api_url: "http://localhost:3000/api/v1"
-  connection_timeout: 5  # Timeout in seconds for Volumio API connection
+  port: 6600
+  connection_timeout: 5  # Timeout in seconds for moode API connection
 
 display:
-  icon_dir: "/home/volumio/Quadify/src/assets/images"
-  default_album_art: "/home/volumio/Quadify/src/assets/images/webradio.png"
-  loading_gif_path: "/home/volumio/Quadify/src/assets/images/Loading.gif"  # Path for loading screen GIF
-  logo_path: "/home/volumio/Quadify/src/assets/images/logo.png"  # Path relative to project root
+  icon_dir: "/home/matt/Quadify/src/assets/images"
+  default_album_art: "/home/matt/Quadify/src/assets/images/webradio.png"
+  loading_gif_path: "/home/matt/Quadify/src/assets/images/Loading.gif"  # Path for loading screen GIF
+  logo_path: "/home/matt/Quadify/src/assets/images/logo.png"  # Path relative to project root
   rotation: 2  # Set rotation if needed (0, 90, 180, 270)
   fonts:
     playback_large:
-      path: "/home/volumio/Quadify/src/assets/fonts/DSEG7Classic-Light.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/DSEG7Classic-Light.ttf"
       size: 45
     playback_medium:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 18
     playback_small:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 12
     artist_font:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 12
     song_font:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 14
     data_font:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 10
     menu_font:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 12
     menu_font_bold:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Bold.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Bold.ttf"
       size: 12
     clock_large:
-      path: "/home/volumio/Quadify/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
       size: 35
     sample_rate:
-      path: "/home/volumio/Quadify/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
       size: 46
     sample_rate_khz:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 12
     radio_title:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 15
     radio_bitrate:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 12
     volume_small:
-      path: "/home/volumio/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
+      path: "/home/matt/Quadify/src/assets/fonts/OpenSans-Regular.ttf"
       size: 8
   refresh_rate: 60  # Display refresh rate in Hz
   cache_images: true  # Cache frequently used images for faster access
   preload_images:
-    - "/home/volumio/Quadify/src/assets/images/webradio.png"
-    - "/home/volumio/Quadify/src/assets/images/mpd.png"
-    - "/home/volumio/Quadify/src/assets/images/library.png"
-    - "/home/volumio/Quadify/src/assets/images/stream.png"
-    - "/home/volumio/Quadify/src/assets/images/tidal.png"
-    - "/home/volumio/Quadify/src/assets/images/qobuz.png"
-    - "/home/volumio/Quadify/src/assets/images/spop.png"      
-    - "/home/volumio/Quadify/src/assets/images/playlists.png"
-    - "/home/volumio/Quadify/src/assets/images/default.png"
-    - "/home/volumio/Quadify/src/assets/images/nas.png"
-    - "/home/volumio/Quadify/src/assets/images/usb.png"
-    - "/home/volumio/Quadify/src/assets/images/volume.png"
-    - "/home/volumio/Quadify/src/assets/images/display.png"
-    - "/home/volumio/Quadify/src/assets/images/displayfm4.png"
-    - "/home/volumio/Quadify/src/assets/images/displaymodern.png"
+    - "/home/matt/Quadify/src/assets/images/webradio.png"
+    - "/home/matt/Quadify/src/assets/images/mpd.png"
+    - "/home/matt/Quadify/src/assets/images/library.png"
+    - "/home/matt/Quadify/src/assets/images/stream.png"
+    - "/home/matt/Quadify/src/assets/images/tidal.png"
+    - "/home/matt/Quadify/src/assets/images/qobuz.png"
+    - "/home/matt/Quadify/src/assets/images/spop.png"      
+    - "/home/matt/Quadify/src/assets/images/playlists.png"
+    - "/home/matt/Quadify/src/assets/images/default.png"
+    - "/home/matt/Quadify/src/assets/images/nas.png"
+    - "/home/matt/Quadify/src/assets/images/usb.png"
+    - "/home/matt/Quadify/src/assets/images/volume.png"
+    - "/home/matt/Quadify/src/assets/images/display.png"
+    - "/home/matt/Quadify/src/assets/images/displayfm4.png"
+    - "/home/matt/Quadify/src/assets/images/displaymodern.png"
 mcp23017_address: 0x20
 
 logging:
   level: "DEBUG"  # Options: DEBUG, INFO, WARNING, ERROR
-  log_file: "/home/volumio/Quadify/quadifyclean.log"
+  log_file: "/home/matt/Quadify/quadifyclean.log"
   log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 

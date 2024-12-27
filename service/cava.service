@@ -3,11 +3,12 @@ Description=CAVA - Console-based Audio Visualizer
 After=sound.target
 
 [Service]
-ExecStart=/usr/local/bin/cava -p /home/volumio/.config/cava/config
+ExecStart=/usr/local/bin/cava -p /home/__INSTALL_USER__/.config/cava/config
 Restart=always
 RestartSec=3
-User=volumio
-Group=volumio
+User=__INSTALL_USER__
+Group=__INSTALL_USER__
 
 [Install]
 WantedBy=multi-user.target
+

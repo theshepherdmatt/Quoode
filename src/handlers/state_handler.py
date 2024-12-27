@@ -3,8 +3,8 @@
 import logging
 
 class StateHandler:
-    def __init__(self, volumio_listener, mode_manager):
-        self.volumio_listener = volumio_listener
+    def __init__(self, moode_listener, mode_manager):
+        self.moode_listener = moode_listener
         self.mode_manager = mode_manager
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG)  # Set to desired level (DEBUG/INFO/etc.)
@@ -13,12 +13,12 @@ class StateHandler:
 
     def register_listeners(self):
         # Connect the receiver method to the 'state_changed' signal
-        self.volumio_listener.state_changed.connect(self.on_volumio_state_change)
+        self.moode_listener.state_changed.connect(self.on_moode_state_change)
         # Register as a mode change callback
         self.mode_manager.add_on_mode_change_callback(self.on_mode_change)
 
-    def on_volumio_state_change(self, *args, **kwargs):
-        """Handle the state change emitted by VolumioListener."""
+    def on_moode_state_change(self, *args, **kwargs):
+        """Handle the state change emitted by moodeListener."""
         self.logger.debug(f"Received state change with args: {args}, kwargs: {kwargs}")
         
         # Extract sender and state
