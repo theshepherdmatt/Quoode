@@ -334,40 +334,24 @@ setup_samba() {
 }
 
 # ============================================
-#        Configure & Enable MPD Output
+#    Copy mpd oled file
 # ============================================
-configure_mpd() {
-    log_progress "Configuring MPD for CAVA in moOde..."
 
-    local MPD_OVERRIDE_FILE="/etc/mpd.conf"
-    local FIFO_OUTPUT="
-audio_output {
-    type            \"fifo\"
-    name            \"CAVA FIFO Output\"
-    path            \"/tmp/cava.fifo\"
-    format          \"44100:16:2\"
-}
-"
+copy_mpd_oled_fifo_conf() {
+    log_progress "Installing mpd_oled_fifo.conf..."
 
-    if [ ! -f "${MPD_OVERRIDE_FILE}.bak" ]; then
-        log_progress "Creating backup of MPD configuration..."
-        run_command "cp $MPD_OVERRIDE_FILE ${MPD_OVERRIDE_FILE}.bak"
-        log_message "success" "Backup created at ${MPD_OVERRIDE_FILE}.bak"
-    fi
+    local SOURCE_CONF="/home/$INSTALL_USER/Quoode/mpd_oled_fifo.conf"
+    local DEST_CONF="/usr/local/etc/mpd_oled_fifo.conf"
 
-    if grep -q "path.*\"/tmp/cava.fifo\"" "$MPD_OVERRIDE_FILE"; then
-        log_message "info" "FIFO output config already exists in MPD config."
+    if [[ -f "$SOURCE_CONF" ]]; then
+        run_command "mkdir -p /usr/local/etc"
+        run_command "cp \"$SOURCE_CONF\" \"$DEST_CONF\""
+        log_message "success" "Copied mpd_oled_fifo.conf to /usr/local/etc."
     else
-        log_progress "Adding FIFO output config..."
-        echo "$FIFO_OUTPUT" >> "$MPD_OVERRIDE_FILE"
-        log_message "success" "FIFO output config appended to MPD config."
+        log_message "warning" "mpd_oled_fifo.conf not found at $SOURCE_CONF, skipping."
     fi
-
-    log_progress "Restarting MPD..."
-    run_command "systemctl restart mpd"
-
-    log_message "success" "MPD configured for CAVA."
 }
+
 
 # ============================================
 #    Check if CAVA Already Installed
@@ -557,9 +541,10 @@ main() {
     setup_cava_service
     setup_samba
     set_permissions
+    copy_mpd_oled_fifo_conf
 
     # (Optional) Overwrite moOde's mpd.php
-    # overwrite_moode_mpdphp
+    overwrite_moode_mpdphp
 
     log_message "success" "Installation complete. Review $LOG_FILE for details if needed."
 }
