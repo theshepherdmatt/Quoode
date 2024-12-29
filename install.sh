@@ -90,7 +90,6 @@ check_root() {
     fi
 }
 
-# Detect the actual user running sudo
 INSTALL_USER="${SUDO_USER:-$USER}"
 
 # ============================================
@@ -100,7 +99,7 @@ configure_buttons_leds() {
     log_progress "Configuring Buttons and LEDs activation..."
 
     local MAIN_PY_PATH="/home/$INSTALL_USER/Quoode/src/main.py"
-    CONFIGURE_BUTTONS_LEDS=false  # default
+    CONFIGURE_BUTTONS_LEDS=false
 
     if [[ ! -f "$MAIN_PY_PATH" ]]; then
         log_message "error" "main.py not found at $MAIN_PY_PATH."
@@ -113,7 +112,6 @@ configure_buttons_leds() {
             [Yy]* )
                 CONFIGURE_BUTTONS_LEDS=true
                 log_message "info" "Buttons and LEDs will be activated."
-                # Un-comment lines if they are commented
                 if grep -q "^[#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
                     sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^#//' "$MAIN_PY_PATH"
                     log_message "success" "Activated 'buttons_leds = ButtonsLEDController(...)' in main.py."
@@ -132,7 +130,6 @@ configure_buttons_leds() {
             [Nn]* )
                 CONFIGURE_BUTTONS_LEDS=false
                 log_message "info" "Buttons and LEDs will be deactivated."
-                # Comment lines if they are uncommented
                 if grep -q "^[^#]*\s*buttons_leds\s*=\s*ButtonsLEDController" "$MAIN_PY_PATH"; then
                     sed -i.bak '/buttons_leds\s*=\s*ButtonsLEDController/ s/^\(\s*\)/\1#/' "$MAIN_PY_PATH"
                     log_message "success" "Deactivated 'buttons_leds = ButtonsLEDController(...)' in main.py."
@@ -190,7 +187,10 @@ install_system_dependencies() {
         autoconf \
         gcc \
         make \
-        git"
+        git \
+        libtiff6 \
+        libtiff-tools \
+        libtiff-dev"
 
     log_message "success" "System-level dependencies installed successfully."
 }
@@ -210,7 +210,6 @@ upgrade_pip_system_wide() {
 install_python_dependencies() {
     log_progress "Installing Python dependencies system-wide..."
 
-    # Install from requirements.txt
     run_command "python3 -m pip install --upgrade \
         --ignore-installed \
         --no-cache-dir \
@@ -227,8 +226,6 @@ enable_i2c_spi() {
     log_progress "Ensuring I2C and SPI are enabled in config..."
 
     CONFIG_FILE="/boot/firmware/config.txt"
-    # On some systems it might be /boot/config.txt
-
     if [ ! -f "$CONFIG_FILE" ]; then
         log_message "error" "Cannot find $CONFIG_FILE"
         exit 1
@@ -252,7 +249,6 @@ enable_i2c_spi() {
         log_message "info" "SPI parameter added."
     fi
 
-    # Load kernel modules immediately
     run_command "modprobe i2c-dev"
     run_command "modprobe spi-bcm2835"
 
@@ -271,7 +267,6 @@ detect_i2c_address() {
 
     echo "$i2c_output"
 
-    # Look for addresses 0x20 to 0x27
     local address
     address=$(echo "$i2c_output" | grep -oE '\b(20|21|22|23|24|25|26|27)\b' | head -n 1)
 
@@ -290,7 +285,7 @@ update_buttonsleds_address() {
     if [[ -f "$BUTTONSLEDS_FILE" ]]; then
         if grep -q "mcp23017_address" "$BUTTONSLEDS_FILE"; then
             run_command "sed -i \"s/mcp23017_address = 0x[0-9a-fA-F]\\{2\\}/mcp23017_address = 0x$detected_address/\" \"$BUTTONSLEDS_FILE\""
-            log_message "success" "MCP23017 address updated to 0x$detected_address in buttonsleds.py."
+            log_message "success" "MCP23017 address updated to 0x$detected_address."
         else
             run_command "echo \"mcp23017_address = 0x$detected_address\" >> \"$BUTTONSLEDS_FILE\""
             log_message "success" "MCP23017 address added to buttonsleds.py."
@@ -329,12 +324,10 @@ setup_samba() {
         log_message "info" "Samba configuration for Quoode already exists."
     fi
 
-    # Enable & restart services
     log_progress "Enabling and starting Samba services..."
     run_command "systemctl enable smbd nmbd"
     run_command "systemctl restart smbd nmbd"
 
-    # Set directory permissions
     run_command "chown -R $INSTALL_USER:$INSTALL_USER /home/$INSTALL_USER/Quoode"
     run_command "chmod -R 755 /home/$INSTALL_USER/Quoode"
     log_message "success" "Samba and directory permissions configured."
@@ -356,14 +349,12 @@ audio_output {
 }
 "
 
-    # Backup
     if [ ! -f "${MPD_OVERRIDE_FILE}.bak" ]; then
         log_progress "Creating backup of MPD configuration..."
         run_command "cp $MPD_OVERRIDE_FILE ${MPD_OVERRIDE_FILE}.bak"
         log_message "success" "Backup created at ${MPD_OVERRIDE_FILE}.bak"
     fi
 
-    # Check & append FIFO
     if grep -q "path.*\"/tmp/cava.fifo\"" "$MPD_OVERRIDE_FILE"; then
         log_message "info" "FIFO output config already exists in MPD config."
     else
@@ -372,7 +363,6 @@ audio_output {
         log_message "success" "FIFO output config appended to MPD config."
     fi
 
-    # Restart MPD
     log_progress "Restarting MPD..."
     run_command "systemctl restart mpd"
 
@@ -419,7 +409,6 @@ install_cava_from_fork() {
         libiniparser-dev \
         git"
 
-    # Clone or pull
     if [[ ! -d "$CAVA_INSTALL_DIR" ]]; then
         run_command "git clone $CAVA_REPO $CAVA_INSTALL_DIR"
         log_message "success" "Cloned CAVA repository."
@@ -428,7 +417,6 @@ install_cava_from_fork() {
         run_command "cd $CAVA_INSTALL_DIR && git pull"
     fi
 
-    # Build & install
     log_progress "Building & installing CAVA..."
     run_command "cd $CAVA_INSTALL_DIR && ./autogen.sh"
     run_command "cd $CAVA_INSTALL_DIR && ./configure"
@@ -476,7 +464,6 @@ setup_cava_service() {
     local SRC_CAVA_FILE="/home/$INSTALL_USER/Quoode/service/cava.service"
 
     if [[ -f "$SRC_CAVA_FILE" ]]; then
-        # Replace placeholder in service file
         run_command "sed -i \"s:__INSTALL_USER__:$INSTALL_USER:g\" \"$SRC_CAVA_FILE\""
         run_command "cp \"$SRC_CAVA_FILE\" \"$CAVA_SERVICE_FILE\""
         log_message "success" "cava.service copied to /etc/systemd/system/."
@@ -485,12 +472,36 @@ setup_cava_service() {
         exit 1
     fi
 
-    # Reload and start
     run_command "systemctl daemon-reload"
     run_command "systemctl enable cava.service"
     run_command "systemctl start cava.service"
 
     log_message "success" "CAVA Service enabled and started."
+}
+
+# ============================================
+#  Overwrite moOde's mpd.php (Optional)
+# ============================================
+overwrite_moode_mpdphp() {
+    log_progress "Overwriting moOde's mpd.php with custom version..."
+    local MOODE_MPD_PHP="/var/www/inc/mpd.php"
+    local CUSTOM_MPD_PHP="/home/$INSTALL_USER/Quoode/moode_patches/mpd.php"   # Adjust the path if needed
+
+    if [[ -f "$MOODE_MPD_PHP" ]]; then
+        # Backup original
+        run_command "cp $MOODE_MPD_PHP ${MOODE_MPD_PHP}.orig"
+        log_message "info" "Backed up original mpd.php to mpd.php.orig"
+    fi
+
+    if [[ -f "$CUSTOM_MPD_PHP" ]]; then
+        run_command "cp $CUSTOM_MPD_PHP $MOODE_MPD_PHP"
+        log_message "success" "mpd.php overwritten with custom version."
+        # Optionally, restart MPD
+        run_command "systemctl restart mpd"
+        log_message "info" "MPD restarted after mpd.php overwrite."
+    else
+        log_message "warning" "Custom mpd.php not found at $CUSTOM_MPD_PHP. Skipping."
+    fi
 }
 
 # ============================================
@@ -516,7 +527,6 @@ main() {
     configure_buttons_leds
     enable_i2c_spi
 
-    # If buttons & LEDs are activated, also detect I2C address
     if [ "$CONFIGURE_BUTTONS_LEDS" = true ]; then
         detect_i2c_address
     else
@@ -547,6 +557,9 @@ main() {
     setup_cava_service
     setup_samba
     set_permissions
+
+    # (Optional) Overwrite moOde's mpd.php
+    # overwrite_moode_mpdphp
 
     log_message "success" "Installation complete. Review $LOG_FILE for details if needed."
 }
