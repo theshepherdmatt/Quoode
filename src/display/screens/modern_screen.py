@@ -5,9 +5,6 @@ import logging
 from PIL import Image, ImageDraw, ImageFont
 import threading
 import time
-import os
-
-FIFO_PATH = "/tmp/display.fifo"  # Path to the FIFO for CAVA
 
 class ModernScreen(BaseManager):
     def __init__(self, display_manager, moode_listener, mode_manager):
@@ -17,9 +14,6 @@ class ModernScreen(BaseManager):
         self.mode_name = "modern"  # Align with ModeManager's state
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG)
-        self.spectrum_bars = []
-        self.running_spectrum = False
-        self.spectrum_thread = None
 
         # Fonts
         self.font_title = self.display_manager.fonts.get('song_font', ImageFont.load_default())
@@ -48,45 +42,6 @@ class ModernScreen(BaseManager):
         self.moode_listener.state_changed.connect(self.on_moode_state_change)
         self.logger.info("ModernScreen initialized.")
 
-    def _read_fifo(self):
-        """Read spectrum data from FIFO."""
-        if not os.path.exists(FIFO_PATH):
-            self.logger.error(f"FIFO {FIFO_PATH} does not exist.")
-            return
-
-        self.logger.info("Starting spectrum visualisation thread.")
-        try:
-            with open(FIFO_PATH, "r") as fifo:
-                while self.running_spectrum:
-                    line = fifo.readline().strip()
-                    if line:
-                        # Assuming spectrum data is semicolon-separated integers
-                        bars = [int(x) for x in line.split(";") if x.isdigit()]
-                        self.spectrum_bars = bars
-        except Exception as e:
-            self.logger.error(f"Error reading spectrum data: {e}")
-
-    def _draw_spectrum(self, draw):
-        """Draw spectrum bars on the screen."""
-        width, height = self.display_manager.oled.size
-        bars = self.spectrum_bars[::2]  # Downsample to reduce the number of bars
-        bar_width = 2
-        gap_width = 3
-        max_height = height // 2
-        start_x = (width - (len(bars) * (bar_width + gap_width))) // 2
-
-        self.logger.debug(f"Number of bars: {len(bars)}")
-
-        vertical_offset = -8  # Move up by 8 pixels
-
-        for i, bar in enumerate(bars):
-            bar_height = int((bar / 255) * max_height)
-            x1 = start_x + i * (bar_width + gap_width)
-            x2 = x1 + bar_width
-            y1 = height - bar_height + vertical_offset
-            y2 = height + vertical_offset
-            draw.rectangle([x1, y1, x2, y2], fill="#303030")  # Grey colour
-
     def reset_scrolling(self):
         """Reset scrolling parameters."""
         self.logger.debug("ModernScreen: Resetting scrolling offsets.")
@@ -95,18 +50,17 @@ class ModernScreen(BaseManager):
 
     def update_scroll(self, text, font, max_width, scroll_offset):
         """Update scrolling offset for continuous scrolling."""
-        # Use getlength instead of getsize to obtain text width
         try:
             text_width = font.getlength(text)
         except AttributeError:
             # Fallback for older Pillow versions
             bbox = font.getbbox(text)
-            if bbox:
-                text_width = bbox[2] - bbox[0]
-            else:
-                text_width = 0
+            text_width = bbox[2] - bbox[0] if bbox else 0
 
-        self.logger.debug(f"update_scroll: text='{text}', text_width={text_width}, max_width={max_width}, scroll_offset={scroll_offset}")
+        self.logger.debug(
+            f"update_scroll: text='{text}', text_width={text_width}, max_width={max_width}, "
+            f"scroll_offset={scroll_offset}"
+        )
 
         # If the text width is less than the max width, no need to scroll
         if text_width <= max_width:
@@ -141,7 +95,10 @@ class ModernScreen(BaseManager):
                     try:
                         self.current_state["elapsed"] = float(self.current_state["elapsed"]) + elapsed_time
                         last_update_time = time.time()
-                        self.logger.debug(f"update_display_loop: Incremented elapsed by {elapsed_time:.3f}s to {self.current_state['elapsed']:.3f}s.")
+                        self.logger.debug(
+                            f"update_display_loop: Incremented elapsed by {elapsed_time:.3f}s "
+                            f"to {self.current_state['elapsed']:.3f}s."
+                        )
                     except ValueError as e:
                         self.logger.error(f"ModernScreen: Error updating elapsed time - {e}")
                         self.current_state["elapsed"] = 0.0
@@ -159,9 +116,6 @@ class ModernScreen(BaseManager):
 
         base_image = Image.new("RGB", self.display_manager.oled.size, "black")
         draw = ImageDraw.Draw(base_image)
-
-        # Draw spectrum bars
-        self._draw_spectrum(draw)
 
         # Extract information
         song_title = data.get("title", "Unknown Title")
@@ -217,7 +171,8 @@ class ModernScreen(BaseManager):
         total_duration = f"{total_minutes}:{total_seconds:02d}"
 
         self.logger.debug(
-            f"ModernScreen: Progress bar data: elapsed={elapsed:.2f}s, duration={duration}s, progress={progress:.2%}"
+            f"ModernScreen: Progress bar data: elapsed={elapsed:.2f}s, duration={duration}s, "
+            f"progress={progress:.2%}"
         )
 
         screen_width = self.display_manager.oled.width
@@ -233,7 +188,7 @@ class ModernScreen(BaseManager):
         positions = {
             "artist": {"x": screen_width // 2, "y": margin - 8},
             "title": {"x": screen_width // 2, "y": margin + 6},
-            "info": {"x": screen_width // 2, "y": margin + 25},
+            "info":  {"x": screen_width // 2, "y": margin + 25},
             "progress": {"x": screen_width // 2, "y": progress_y},
         }
 
@@ -268,7 +223,16 @@ class ModernScreen(BaseManager):
         self.logger.debug(f"ModernScreen: Title displayed at position ({title_x}, {title_y}).")
 
         # Sample rate and bit depth
-        info_width = self.font_info.getlength(info_text) if hasattr(self.font_info, 'getlength') else (self.font_info.getbbox(info_text)[2] - self.font_info.getbbox(info_text)[0])
+        try:
+            if hasattr(self.font_info, 'getlength'):
+                info_width = self.font_info.getlength(info_text)
+            else:
+                bbox = self.font_info.getbbox(info_text)
+                info_width = bbox[2] - bbox[0] if bbox else 0
+        except Exception as e:
+            self.logger.error(f"ModernScreen: Error calculating info_text width - {e}")
+            info_width = 0
+
         info_x = (screen_width - info_width) // 2
         info_y = positions["info"]["y"] - 6
         draw.text((info_x, info_y), info_text, font=self.font_info, fill="white")
@@ -285,7 +249,10 @@ class ModernScreen(BaseManager):
         volume_text_x = volume_icon_x + 12  # Adjusted to prevent overlapping
         volume_text_y = volume_icon_y - 2
         draw.text((volume_text_x, volume_text_y), volume_text, font=self.font_info, fill="white")
-        self.logger.debug(f"ModernScreen: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}). Text: '{volume_text}'")
+        self.logger.debug(
+            f"ModernScreen: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}). "
+            f"Text: '{volume_text}'"
+        )
 
         # Progress bar and times
         draw.text((progress_x - 30, progress_y - 9), current_time, font=self.font_info, fill="white")
@@ -305,7 +272,7 @@ class ModernScreen(BaseManager):
 
         # Update the display
         self.display_manager.oled.display(base_image)
-        self.logger.info("Updated display with playback details and spectrum visualisation.")
+        self.logger.info("Updated display with playback details.")
 
     def on_moode_state_change(self, sender, state, **kwargs):
         """Handle state changes from moode."""
@@ -320,20 +287,13 @@ class ModernScreen(BaseManager):
         self.update_event.set()
 
     def start_mode(self):
-        """Activate ModernScreen mode with spectrum visualisation."""
+        """Activate ModernScreen mode (no spectrum references)."""
         if self.mode_manager.get_mode() != "modern":
             self.logger.warning("ModernScreen: Not on the correct mode for modern playback mode.")
             return
 
         self.is_active = True
         self.reset_scrolling()
-
-        # Start spectrum thread
-        if not self.spectrum_thread or not self.spectrum_thread.is_alive():
-            self.running_spectrum = True
-            self.spectrum_thread = threading.Thread(target=self._read_fifo, daemon=True)
-            self.spectrum_thread.start()
-            self.logger.info("Spectrum thread started.")
 
         # Ensure update thread is running
         if not self.update_thread.is_alive():
@@ -343,19 +303,13 @@ class ModernScreen(BaseManager):
             self.logger.debug("ModernScreen: Update thread restarted.")
 
     def stop_mode(self):
-        """Deactivate ModernScreen mode and stop spectrum visualisation."""
+        """Deactivate ModernScreen mode and stop its threads."""
         if not self.is_active:
             self.logger.info("ModernScreen: stop_mode called, but was not active.")
             return
 
         self.is_active = False
         self.stop_event.set()
-
-        # Stop spectrum thread
-        self.running_spectrum = False
-        if self.spectrum_thread and self.spectrum_thread.is_alive():
-            self.spectrum_thread.join(timeout=1)
-            self.logger.info("Spectrum thread stopped.")
 
         # Stop update thread
         if self.update_thread.is_alive():
@@ -412,6 +366,7 @@ class ModernScreen(BaseManager):
             except Exception as e:
                 self.logger.error(f"ModernScreen: Error calculating title width - {e}")
                 title_width = 0
+
             title_x = (self.display_manager.oled.width - title_width) // 2
             title_y = 10
             draw.text((title_x, title_y), title, font=font, fill="red")
@@ -426,6 +381,7 @@ class ModernScreen(BaseManager):
             except Exception as e:
                 self.logger.error(f"ModernScreen: Error calculating message width - {e}")
                 message_width = 0
+
             message_x = (self.display_manager.oled.width - message_width) // 2
             message_y = title_y + 20  # Adjust spacing as needed
             draw.text((message_x, message_y), message, font=font, fill="white")
