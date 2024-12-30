@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e  # Exit immediately on a non-zero status (fail on error)
-set -x  # Uncomment for debugging (prints each command before execution)
+#set -x  # Uncomment for debugging (prints each command before execution)
 
 # ============================================
 #               Colour Definitions
