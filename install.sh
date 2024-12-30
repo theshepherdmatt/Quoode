@@ -289,7 +289,7 @@ setup_samba() {
    force user = $INSTALL_USER
    create mask = 0775
    directory mask = 0775
-   public = no" >> "$SMB_CONF"
+   public = yes" >> "$SMB_CONF"
         log_message "success" "Samba configuration for Quoode added."
     else
         log_message "info" "Samba configuration for Quoode already exists."
