@@ -42,8 +42,7 @@ class DisplayManager:
         self.default_icon = self.load_default_icon()
 
         # Define the services and load their corresponding icons (excluding 'default')
-        services = ["stream", "library", "playlists", "qobuz", "tidal", "spop", "spotify",
-                    "webradio", "mpd", "nas", "usb", "display", "volume"]
+        services = ["library", "playlists", "webradio", "mpd", "nas", "usb", "display", "volume"]
         icon_dir = self.config.get('icon_dir', "/home/matt/Quoode/src/assets/images")
 
         for service in services:

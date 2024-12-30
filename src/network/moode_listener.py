@@ -135,10 +135,19 @@ class MoodeListener:
             else:
                 current_service = 'unknown'
 
-            new_state = {'status': status, 'current_service': current_service}
+            new_state = {
+                'status': status,
+                'current_service': current_service,
+            }
+            # Copy keys from currentsong
             for key, val in currentsong.items():
                 if key not in new_state:
                     new_state[key] = val
+
+            # Promote elapsed, duration, AND volume
+            new_state['elapsed'] = status.get('elapsed', '0')
+            new_state['duration'] = status.get('duration', '1')
+            new_state['volume'] = status.get('volume', '50')
 
             self.state_changed.send(self, state=new_state)
 

@@ -57,10 +57,10 @@ class ModernScreen(BaseManager):
             bbox = font.getbbox(text)
             text_width = bbox[2] - bbox[0] if bbox else 0
 
-        self.logger.debug(
-            f"update_scroll: text='{text}', text_width={text_width}, max_width={max_width}, "
-            f"scroll_offset={scroll_offset}"
-        )
+        #self.logger.debug(
+            #f"update_scroll: text='{text}', text_width={text_width}, max_width={max_width}, "
+            #f"scroll_offset={scroll_offset}"
+        #)
 
         # If the text width is less than the max width, no need to scroll
         if text_width <= max_width:
@@ -88,30 +88,30 @@ class ModernScreen(BaseManager):
                         self.latest_state = None
                         last_update_time = time.time()  # Reset time for smooth progress
                         self.update_event.clear()
-                        self.logger.debug("update_display_loop: State updated from latest_state.")
+                        #self.logger.debug("update_display_loop: State updated from latest_state.")
                 elif self.current_state and "elapsed" in self.current_state and "duration" in self.current_state:
                     # Simulate seek progress
                     elapsed_time = time.time() - last_update_time
                     try:
                         self.current_state["elapsed"] = float(self.current_state["elapsed"]) + elapsed_time
                         last_update_time = time.time()
-                        self.logger.debug(
-                            f"update_display_loop: Incremented elapsed by {elapsed_time:.3f}s "
-                            f"to {self.current_state['elapsed']:.3f}s."
-                        )
+                        #self.logger.debug(
+                            #f"update_display_loop: Incremented elapsed by {elapsed_time:.3f}s "
+                            #f"to {self.current_state['elapsed']:.3f}s."
+                        #)
                     except ValueError as e:
-                        self.logger.error(f"ModernScreen: Error updating elapsed time - {e}")
+                        #self.logger.error(f"ModernScreen: Error updating elapsed time - {e}")
                         self.current_state["elapsed"] = 0.0
 
             # Check if mode_manager mode is 'modern'
             if self.is_active and self.mode_manager.get_mode() == "modern" and self.current_state:
-                self.logger.debug("ModernScreen: Redrawing playback screen.")
+                #self.logger.debug("ModernScreen: Redrawing playback screen.")
                 self.draw_display(self.current_state)
 
     def draw_display(self, data):
         """Draw the ModernScreen display with smooth and continuous scrolling."""
         if data is None:
-            self.logger.warning("ModernScreen: No data provided for display.")
+            #self.logger.warning("ModernScreen: No data provided for display.")
             return
 
         base_image = Image.new("RGB", self.display_manager.oled.size, "black")
@@ -134,7 +134,7 @@ class ModernScreen(BaseManager):
             try:
                 samplerate_khz = f"{int(samplerate)/1000:.1f}kHz"
             except ValueError:
-                self.logger.error(f"ModernScreen: Invalid samplerate value '{samplerate}'. Setting to 'N/A'.")
+                #self.logger.error(f"ModernScreen: Invalid samplerate value '{samplerate}'. Setting to 'N/A'.")
                 samplerate_khz = "N/A"
         else:
             samplerate_khz = "N/A"
@@ -143,20 +143,20 @@ class ModernScreen(BaseManager):
             try:
                 bitdepth_bit = f"{int(bitdepth)}bit"
             except ValueError:
-                self.logger.error(f"ModernScreen: Invalid bitdepth value '{bitdepth}'. Setting to 'N/A'.")
+                #self.logger.error(f"ModernScreen: Invalid bitdepth value '{bitdepth}'. Setting to 'N/A'.")
                 bitdepth_bit = "N/A"
         else:
             bitdepth_bit = "N/A"
 
         info_text = f"{samplerate_khz} / {bitdepth_bit}"
-        self.logger.debug(f"Formatted info_text: '{info_text}'")
+        #self.logger.debug(f"Formatted info_text: '{info_text}'")
 
         # Convert 'elapsed' and 'duration' to float
         try:
             elapsed = float(elapsed_str)
             duration = float(duration_str)
         except (ValueError, TypeError) as e:
-            self.logger.error(f"ModernScreen: Error converting time strings to float - {e}")
+            #self.logger.error(f"ModernScreen: Error converting time strings to float - {e}")
             elapsed = 0.0
             duration = 1.0  # Avoid division by zero
 
@@ -170,10 +170,10 @@ class ModernScreen(BaseManager):
         current_time = f"{current_minutes}:{current_seconds:02d}"
         total_duration = f"{total_minutes}:{total_seconds:02d}"
 
-        self.logger.debug(
-            f"ModernScreen: Progress bar data: elapsed={elapsed:.2f}s, duration={duration}s, "
-            f"progress={progress:.2%}"
-        )
+        #self.logger.debug(
+            #f"ModernScreen: Progress bar data: elapsed={elapsed:.2f}s, duration={duration}s, "
+            #f"progress={progress:.2%}"
+        #)
 
         screen_width = self.display_manager.oled.width
         screen_height = self.display_manager.oled.height
@@ -186,9 +186,9 @@ class ModernScreen(BaseManager):
         progress_y = margin + 55
 
         positions = {
-            "artist": {"x": screen_width // 2, "y": margin - 8},
-            "title": {"x": screen_width // 2, "y": margin + 6},
-            "info":  {"x": screen_width // 2, "y": margin + 25},
+            "artist": {"x": screen_width // 2, "y": margin - 6},
+            "title": {"x": screen_width // 2, "y": margin + 10},
+            "info":  {"x": screen_width // 2, "y": margin + 32},
             "progress": {"x": screen_width // 2, "y": progress_y},
         }
 
@@ -205,7 +205,7 @@ class ModernScreen(BaseManager):
         artist_y = positions["artist"]["y"]
 
         draw.text((artist_x, artist_y), artist_display, font=self.font_artist, fill="white")
-        self.logger.debug(f"ModernScreen: Artist displayed at position ({artist_x}, {artist_y}).")
+        #self.logger.debug(f"ModernScreen: Artist displayed at position ({artist_x}, {artist_y}).")
 
         # Title scrolling
         title_display, self.scroll_offset_title, title_scrolling = self.update_scroll(
@@ -220,7 +220,7 @@ class ModernScreen(BaseManager):
         title_y = positions["title"]["y"] - 2
 
         draw.text((title_x, title_y), title_display, font=self.font_title, fill="white")
-        self.logger.debug(f"ModernScreen: Title displayed at position ({title_x}, {title_y}).")
+        #self.logger.debug(f"ModernScreen: Title displayed at position ({title_x}, {title_y}).")
 
         # Sample rate and bit depth
         try:
@@ -236,55 +236,158 @@ class ModernScreen(BaseManager):
         info_x = (screen_width - info_width) // 2
         info_y = positions["info"]["y"] - 6
         draw.text((info_x, info_y), info_text, font=self.font_info, fill="white")
-        self.logger.debug(f"ModernScreen: Info displayed at position ({info_x}, {info_y}). Text: '{info_text}'")
+        #self.logger.debug(f"ModernScreen: Info displayed at position ({info_x}, {info_y}). Text: '{info_text}'")
 
         # Volume icon and text
         volume_icon = self.display_manager.icons.get('volume', self.display_manager.default_icon)
         volume_icon = volume_icon.resize((10, 10), Image.LANCZOS)
-        volume_icon_x = progress_x - 30
-        volume_icon_y = progress_y - 22
+        volume_icon_x = progress_x - 32
+        volume_icon_y = (progress_y - 22) - 2
         base_image.paste(volume_icon, (volume_icon_x, volume_icon_y))
 
         volume_text = f"{volume}"
-        volume_text_x = volume_icon_x + 12  # Adjusted to prevent overlapping
+        volume_text_x = volume_icon_x + 10  # Adjusted to prevent overlapping
         volume_text_y = volume_icon_y - 2
         draw.text((volume_text_x, volume_text_y), volume_text, font=self.font_info, fill="white")
-        self.logger.debug(
-            f"ModernScreen: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}). "
-            f"Text: '{volume_text}'"
-        )
+        #self.logger.debug(
+            #f"ModernScreen: Volume icon and text displayed at ({volume_icon_x}, {volume_icon_y}). "
+            #f"Text: '{volume_text}'"
+        #)
 
-        # Progress bar and times
-        draw.text((progress_x - 30, progress_y - 9), current_time, font=self.font_info, fill="white")
-        draw.text((progress_x + progress_width + 12, progress_y - 9), total_duration, font=self.font_info, fill="white")
 
-        draw.line([progress_x, progress_y, progress_x + progress_width, progress_y], fill="white", width=1)
-        indicator_x = progress_x + int(progress_width * progress)
-        draw.line([indicator_x, progress_y - 2, indicator_x, progress_y + 2], fill="white", width=1)
+        # Keep the times either side:
+        draw.text((progress_x - 30, progress_y - 10), current_time, font=self.font_info, fill="white")
+        draw.text((progress_x + progress_width + 12, progress_y - 10), total_duration, font=self.font_info, fill="white")
 
-        # Track type icon
-        track_type = data.get('trackType', 'default')
-        right_icon = self.display_manager.icons.get(track_type, self.display_manager.default_icon)
-        right_icon = right_icon.resize((16, 16), Image.LANCZOS)
-        right_icon_x = progress_x + progress_width + 15
-        right_icon_y = progress_y - 26
-        base_image.paste(right_icon, (right_icon_x, right_icon_y))
+        progress_box_height = 4
+        num_squares = 20
+
+        # Outer box (rectangle) coordinates
+        outer_box = [
+            progress_x,
+            progress_y - progress_box_height,
+            progress_x + progress_width,
+            progress_y
+        ]
+
+        # Draw the thin rectangle in white
+        draw.rectangle(outer_box, outline="white", fill=None)
+
+        # How many squares to fill
+        filled_squares = int(num_squares * progress)
+
+        # Each square's total width + spacing
+        square_total_width = progress_width / num_squares
+        square_spacing = 2
+        square_fill_width = square_total_width - square_spacing
+
+        for i in range(num_squares):
+            # Shift left edge by +1 pixel from progress_x so we see the boundary
+            left_edge = (progress_x + 1) + i * square_total_width
+            right_edge = left_edge + square_fill_width
+
+            # Square (top-left, bottom-right)
+            square_box = [
+                left_edge,
+                (progress_y - progress_box_height) + 1,  # +1 so the top border shows
+                right_edge,
+                progress_y - 1                           # -1 so the bottom border shows
+            ]
+
+            if i < filled_squares:
+                # Filled squares in light grey
+                draw.rectangle(square_box, outline=None, fill="#aaaaaa")
+            else:
+                # Unfilled squares in black (or darker grey)
+                draw.rectangle(square_box, outline=None, fill="black")
+
+
+
+        # 1) Determine the service from 'current_service'
+        service = data.get("current_service", "default").lower()
+        icon = self.display_manager.icons.get(service, self.display_manager.default_icon)
+
+        # 2) Resize to 16×16 if not already that size
+        if icon.size != (22, 22):
+            # BICUBIC is gentler than NEAREST, less blurry than LANCZOS on tiny icons
+            icon = icon.resize((22, 22), Image.BICUBIC)
+
+        # 3) If icon is RGBA, flatten it to an RGB background using alpha mask
+        if icon.mode == "RGBA":
+            background = Image.new("RGB", icon.size, (0, 0, 0))  # black background
+            alpha_channel = icon.split()[3]  # The alpha
+            background.paste(icon, mask=alpha_channel)
+            icon = background
+
+        # 4) Position and paste onto base_image
+        right_icon_x = progress_x + progress_width + 10
+        right_icon_y = progress_y - 30
+
+        base_image.paste(icon, (right_icon_x, right_icon_y))
+
+
 
         # Update the display
         self.display_manager.oled.display(base_image)
-        self.logger.info("Updated display with playback details.")
+        #self.logger.info("Updated display with playback details.")
+
 
     def on_moode_state_change(self, sender, state, **kwargs):
         """Handle state changes from moode."""
         # Process only if active and mode is 'modern'
         if not self.is_active or self.mode_manager.get_mode() != "modern":
-            self.logger.debug("ModernScreen: Ignoring state change; not active or wrong mode.")
             return
 
         self.logger.debug(f"State change received: {state}")
+
+        # Extract new elapsed/duration from MoodeListener
+        new_elapsed_str = state.get('elapsed', '0')
+        status_dict = state.get("status", {})
+        mpd_state = status_dict.get('state', '').lower()
+
+        try:
+            new_elapsed = float(new_elapsed_str)
+        except ValueError:
+            new_elapsed = 0.0
+
+        # Identify track change by comparing the 'id' field (or 'pos', 'title', etc.)
+        new_id = state.get('id')              # e.g. '39'
+        old_id = None
+        old_elapsed = 0.0
+
         with self.state_lock:
+            if self.current_state and "elapsed" in self.current_state:
+                old_id = self.current_state.get('id')
+                old_elapsed = float(self.current_state.get('elapsed', 0.0))
+
+            # Check if it's a brand-new track
+            track_changed = (new_id is not None and new_id != old_id)
+
+            if mpd_state == "play" and new_elapsed <= old_elapsed and not track_changed:
+                # The same track, smaller elapsed => ignore
+                self.logger.debug(
+                    f"Ignoring new elapsed={new_elapsed} because old_elapsed={old_elapsed}, "
+                    f"mpd_state=play, same track ID={old_id}."
+                )
+                return
+
+            # Accept the new state
+            if track_changed:
+                self.logger.debug(
+                    f"Track changed (old_id={old_id}, new_id={new_id}); accepting smaller elapsed "
+                    f"{new_elapsed} for new track."
+                )
+            else:
+                self.logger.debug(
+                    f"Accepting new elapsed={new_elapsed} (old_elapsed={old_elapsed}), mpd_state={mpd_state}."
+                )
+
             self.latest_state = state
+
+        # Trigger the update thread
         self.update_event.set()
+
+
 
     def start_mode(self):
         """Activate ModernScreen mode (no spectrum references)."""
