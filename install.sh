@@ -15,7 +15,7 @@ NC='\033[0m'  # No Colour
 # ============================================
 #             Progress Tracking
 # ============================================
-TOTAL_STEPS=12
+TOTAL_STEPS=10
 CURRENT_STEP=0
 LOG_FILE="/home/${SUDO_USER:-$USER}/install.log"
 
