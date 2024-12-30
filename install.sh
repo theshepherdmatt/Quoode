@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e  # Exit immediately on a non-zero status (fail on error)
-# set -x  # Uncomment for debugging (prints each command before execution)
+set -x  # Uncomment for debugging (prints each command before execution)
 
 # ============================================
 #               Colour Definitions
@@ -263,6 +263,9 @@ install_python_dependencies() {
         --no-cache-dir \
         --break-system-packages \
         --verbose -r /home/$INSTALL_USER/Quoode/requirements.txt > /home/$INSTALL_USER/install_requirements.log 2>&1"
+
+    # Now upgrade websocket-client for CamillaDSP compatibility:
+    #run_command "python3 -m pip install --upgrade websocket-client"
 
     log_message "success" "Python dependencies installed successfully system-wide."
 }
