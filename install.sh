@@ -15,41 +15,12 @@ NC='\033[0m'  # No Colour
 # ============================================
 #             Progress Tracking
 # ============================================
-TOTAL_STEPS=17
+TOTAL_STEPS=12
 CURRENT_STEP=0
 LOG_FILE="/home/${SUDO_USER:-$USER}/install.log"
 
 # Remove any existing log file
 rm -f "$LOG_FILE"
-
-# ============================================
-#              ASCII Art Banner
-# ============================================
-banner() {
-    echo -e "${MAGENTA}"
-    echo "                                                                                                                                 "
-    echo "                                                                  dddddddd                                                       "
-    echo "     QQQQQQQQQ     UUUUUUUU     UUUUUUUU     OOOOOOOOO          OOOOOOOOO     DDDDDDDDDDDDD      EEEEEEEEEEEEEEEEEEEEEE         "
-    echo "   QQ:::::::::QQ   U::::::U     U::::::U   OO:::::::::OO      OO:::::::::OO   D::::::::::::DDD   E::::::::::::::::::::E         "
-    echo " QQ:::::::::::::QQ U::::::U     U::::::U OO:::::::::::::OO  OO:::::::::::::OO D:::::::::::::::DD E::::::::::::::::::::E         "
-    echo "Q:::::::QQQ:::::::QUU:::::U     U:::::UUO:::::::OOO:::::::OO:::::::OOO:::::::ODDD:::::DDDDD:::::DEE::::::EEEEEEEEE::::E        "
-    echo "Q::::::O   Q::::::Q U:::::U     U:::::U O::::::O   O::::::OO::::::O   O::::::O  D:::::D    D:::::D E:::::E       EEEEEE        "
-    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::E                    "
-    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE::::::EEEEEEEEEE          "
-    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::::::::::::E          "
-    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::::::::::::E          "
-    echo "Q:::::O     Q:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE::::::EEEEEEEEEE          "
-    echo "Q:::::O  QQQQ:::::Q U:::::D     D:::::U O:::::O     O:::::OO:::::O     O:::::O  D:::::D     D:::::DE:::::E                    "
-    echo "Q::::::O Q::::::::Q U::::::U   U::::::U O::::::O   O::::::OO::::::O   O::::::O  D:::::D    D:::::D E:::::E       EEEEEE        "
-    echo "Q:::::::QQ::::::::Q U:::::::UUU:::::::U O:::::::OOO:::::::OO:::::::OOO:::::::ODDD:::::DDDDD:::::DEE::::::EEEEEEEE:::::E        "
-    echo " QQ::::::::::::::Q   UU:::::::::::::UU   OO:::::::::::::OO  OO:::::::::::::OO D:::::::::::::::DD E::::::::::::::::::::E         "
-    echo "   QQ:::::::::::Q      UU:::::::::UU       OO:::::::::OO      OO:::::::::OO   D::::::::::::DDD   E::::::::::::::::::::E         "
-    echo "     QQQQQQQQ::::QQ      UUUUUUUUU           OOOOOOOOO          OOOOOOOOO     DDDDDDDDDDDDD      EEEEEEEEEEEEEEEEEEEEEE         "
-    echo "             Q:::::Q                                                                                                             "
-    echo "              QQQQQQ                                                                                                             "
-    echo "                                                                                                                               "
-    echo -e "${NC}"
-}
 
 # ============================================
 #            Logging & Progress
@@ -154,72 +125,6 @@ configure_buttons_leds() {
 }
 
 # ============================================
-#   System-Level Dependencies
-# ============================================
-install_system_dependencies() {
-    log_progress "Installing system-level dependencies..."
-
-    run_command "apt-get update"
-    run_command "apt-get install -y \
-        python3 \
-        python3-dev \
-        python3-pip \
-        libjpeg-dev \
-        zlib1g-dev \
-        libfreetype6-dev \
-        i2c-tools \
-        python3-smbus \
-        libgirepository1.0-dev \
-        pkg-config \
-        libcairo2-dev \
-        libffi-dev \
-        build-essential \
-        libxml2-dev \
-        libxslt1-dev \
-        libssl-dev \
-        lsof \
-        libfftw3-dev \
-        libasound2-dev \
-        libncursesw5-dev \
-        libpulse-dev \
-        libtool \
-        automake \
-        autoconf \
-        gcc \
-        make \
-        git \
-        libtiff6 \
-        libtiff-tools \
-        libtiff-dev"
-
-    log_message "success" "System-level dependencies installed successfully."
-}
-
-# ============================================
-#    Upgrade pip, setuptools, wheel
-# ============================================
-upgrade_pip_system_wide() {
-    log_progress "Upgrading pip, setuptools, and wheel system-wide..."
-    run_command "python3 -m pip install --upgrade pip setuptools wheel --break-system-packages"
-    log_message "success" "pip, setuptools, and wheel upgraded successfully."
-}
-
-# ============================================
-#  Install Python Dependencies System-Wide
-# ============================================
-install_python_dependencies() {
-    log_progress "Installing Python dependencies system-wide..."
-
-    run_command "python3 -m pip install --upgrade \
-        --ignore-installed \
-        --no-cache-dir \
-        --break-system-packages \
-        --verbose -r /home/$INSTALL_USER/Quoode/requirements.txt > /home/$INSTALL_USER/install_requirements.log 2>&1"
-
-    log_message "success" "Python dependencies installed successfully system-wide."
-}
-
-# ============================================
 #  Enable I2C & SPI in Firmware
 # ============================================
 enable_i2c_spi() {
@@ -297,6 +202,72 @@ update_buttonsleds_address() {
 }
 
 # ============================================
+#   System-Level Dependencies
+# ============================================
+install_system_dependencies() {
+    log_progress "Installing system-level dependencies..."
+
+    run_command "apt-get update"
+    run_command "apt-get install -y \
+        python3 \
+        python3-dev \
+        python3-pip \
+        libjpeg-dev \
+        zlib1g-dev \
+        libfreetype6-dev \
+        i2c-tools \
+        python3-smbus \
+        libgirepository1.0-dev \
+        pkg-config \
+        libcairo2-dev \
+        libffi-dev \
+        build-essential \
+        libxml2-dev \
+        libxslt1-dev \
+        libssl-dev \
+        lsof \
+        libfftw3-dev \
+        libasound2-dev \
+        libncursesw5-dev \
+        libpulse-dev \
+        libtool \
+        automake \
+        autoconf \
+        gcc \
+        make \
+        git \
+        libtiff6 \
+        libtiff-tools \
+        libtiff-dev"
+
+    log_message "success" "System-level dependencies installed successfully."
+}
+
+# ============================================
+#    Upgrade pip, setuptools, wheel
+# ============================================
+upgrade_pip_system_wide() {
+    log_progress "Upgrading pip, setuptools, and wheel system-wide..."
+    run_command "python3 -m pip install --upgrade pip setuptools wheel --break-system-packages"
+    log_message "success" "pip, setuptools, and wheel upgraded successfully."
+}
+
+# ============================================
+#  Install Python Dependencies System-Wide
+# ============================================
+install_python_dependencies() {
+    log_progress "Installing Python dependencies system-wide..."
+
+    run_command "python3 -m pip install --upgrade \
+        --ignore-installed \
+        --no-cache-dir \
+        --break-system-packages \
+        --verbose -r /home/$INSTALL_USER/Quoode/requirements.txt > /home/$INSTALL_USER/install_requirements.log 2>&1"
+
+    log_message "success" "Python dependencies installed successfully system-wide."
+}
+
+# ============================================
 #           Configure Samba
 # ============================================
 setup_samba() {
@@ -334,161 +305,6 @@ setup_samba() {
 }
 
 # ============================================
-#    Copy mpd oled file
-# ============================================
-
-copy_mpd_oled_fifo_conf() {
-    log_progress "Installing mpd_oled_fifo.conf..."
-
-    local SOURCE_CONF="/home/$INSTALL_USER/Quoode/mpd_oled_fifo.conf"
-    local DEST_CONF="/usr/local/etc/mpd_oled_fifo.conf"
-
-    if [[ -f "$SOURCE_CONF" ]]; then
-        run_command "mkdir -p /usr/local/etc"
-        run_command "cp \"$SOURCE_CONF\" \"$DEST_CONF\""
-        log_message "success" "Copied mpd_oled_fifo.conf to /usr/local/etc."
-    else
-        log_message "warning" "mpd_oled_fifo.conf not found at $SOURCE_CONF, skipping."
-    fi
-}
-
-
-# ============================================
-#    Check if CAVA Already Installed
-# ============================================
-check_cava_installed() {
-    if command -v cava >/dev/null 2>&1; then
-        log_message "info" "CAVA is already installed. Skipping."
-        return 0
-    else
-        return 1
-    fi
-}
-
-# ============================================
-#   Install CAVA from Fork (theshepherdmatt)
-# ============================================
-install_cava_from_fork() {
-    log_progress "Installing CAVA from fork..."
-
-    local CAVA_REPO="https://github.com/theshepherdmatt/cava.git"
-    local CAVA_INSTALL_DIR="/home/$INSTALL_USER/cava"
-
-    if check_cava_installed; then
-        return
-    fi
-
-    log_progress "Installing CAVA build dependencies..."
-    run_command "apt-get install -y \
-        libfftw3-dev \
-        libasound2-dev \
-        libncursesw5-dev \
-        libpulse-dev \
-        libtool \
-        automake \
-        autoconf \
-        gcc \
-        make \
-        pkg-config \
-        libiniparser-dev \
-        git"
-
-    if [[ ! -d "$CAVA_INSTALL_DIR" ]]; then
-        run_command "git clone $CAVA_REPO $CAVA_INSTALL_DIR"
-        log_message "success" "Cloned CAVA repository."
-    else
-        log_message "info" "CAVA repo already exists. Pulling latest changes..."
-        run_command "cd $CAVA_INSTALL_DIR && git pull"
-    fi
-
-    log_progress "Building & installing CAVA..."
-    run_command "cd $CAVA_INSTALL_DIR && ./autogen.sh"
-    run_command "cd $CAVA_INSTALL_DIR && ./configure"
-    run_command "cd $CAVA_INSTALL_DIR && make"
-    run_command "cd $CAVA_INSTALL_DIR && make install"
-
-    log_message "success" "CAVA installed successfully."
-}
-
-# ============================================
-#   Setup CAVA Config
-# ============================================
-setup_cava_config() {
-    log_progress "Setting up CAVA configuration..."
-
-    local CONFIG_DIR="/home/$INSTALL_USER/.config/cava"
-    local CONFIG_FILE="$CONFIG_DIR/config"
-    local REPO_CONFIG_FILE="/home/$INSTALL_USER/cava/config/default_config"
-
-    run_command "mkdir -p $CONFIG_DIR"
-
-    if [[ ! -f "$CONFIG_FILE" ]]; then
-        if [[ -f "$REPO_CONFIG_FILE" ]]; then
-            log_message "info" "Copying default CAVA config."
-            run_command "cp $REPO_CONFIG_FILE $CONFIG_FILE"
-        else
-            log_message "error" "Default CAVA config file not found in repo."
-            exit 1
-        fi
-    else
-        log_message "info" "CAVA config already exists. Skipping copy."
-    fi
-
-    run_command "chown -R $INSTALL_USER:$INSTALL_USER $CONFIG_DIR"
-    log_message "success" "CAVA configuration setup complete."
-}
-
-# ============================================
-#   Configure CAVA Service
-# ============================================
-setup_cava_service() {
-    log_progress "Setting up the CAVA Service..."
-
-    local CAVA_SERVICE_FILE="/etc/systemd/system/cava.service"
-    local SRC_CAVA_FILE="/home/$INSTALL_USER/Quoode/service/cava.service"
-
-    if [[ -f "$SRC_CAVA_FILE" ]]; then
-        run_command "sed -i \"s:__INSTALL_USER__:$INSTALL_USER:g\" \"$SRC_CAVA_FILE\""
-        run_command "cp \"$SRC_CAVA_FILE\" \"$CAVA_SERVICE_FILE\""
-        log_message "success" "cava.service copied to /etc/systemd/system/."
-    else
-        log_message "error" "cava.service not found in /home/$INSTALL_USER/Quoode/service."
-        exit 1
-    fi
-
-    run_command "systemctl daemon-reload"
-    run_command "systemctl enable cava.service"
-    run_command "systemctl start cava.service"
-
-    log_message "success" "CAVA Service enabled and started."
-}
-
-# ============================================
-#  Overwrite moOde's mpd.php (Optional)
-# ============================================
-overwrite_moode_mpdphp() {
-    log_progress "Overwriting moOde's mpd.php with custom version..."
-    local MOODE_MPD_PHP="/var/www/inc/mpd.php"
-    local CUSTOM_MPD_PHP="/home/$INSTALL_USER/Quoode/moode_patches/mpd.php"   # Adjust the path if needed
-
-    if [[ -f "$MOODE_MPD_PHP" ]]; then
-        # Backup original
-        run_command "cp $MOODE_MPD_PHP ${MOODE_MPD_PHP}.orig"
-        log_message "info" "Backed up original mpd.php to mpd.php.orig"
-    fi
-
-    if [[ -f "$CUSTOM_MPD_PHP" ]]; then
-        run_command "cp $CUSTOM_MPD_PHP $MOODE_MPD_PHP"
-        log_message "success" "mpd.php overwritten with custom version."
-        # Optionally, restart MPD
-        run_command "systemctl restart mpd"
-        log_message "info" "MPD restarted after mpd.php overwrite."
-    else
-        log_message "warning" "Custom mpd.php not found at $CUSTOM_MPD_PHP. Skipping."
-    fi
-}
-
-# ============================================
 #  Set Ownership & Permissions (Project Dir)
 # ============================================
 set_permissions() {
@@ -504,7 +320,6 @@ set_permissions() {
 #                MAIN Routine
 # ============================================
 main() {
-    banner
     log_message "info" "Starting the installation script..."
     check_root
 
@@ -535,17 +350,12 @@ main() {
         log_message "error" "quoode.service not found in /home/$INSTALL_USER/Quoode/service."
     fi
 
-    configure_mpd
-    install_cava_from_fork
-    setup_cava_config
-    setup_cava_service
+    # If you have an mpd configuration function, call it here
+    # configure_mpd  # (commented or remove if you don't need it)
+
     setup_samba
     set_permissions
-    copy_mpd_oled_fifo_conf
-
-    # (Optional) Overwrite moOde's mpd.php
-    overwrite_moode_mpdphp
-
+    
     log_message "success" "Installation complete. Review $LOG_FILE for details if needed."
 }
 
