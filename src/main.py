@@ -213,8 +213,8 @@ def main():
     usb_library_manager = manager_factory.usb_library_manager
 
     # 17. Initialize ButtonsLEDController
-    #buttons_leds = ButtonsLEDController(moode_listener=moode_listener, config_path=config_path)
-    #buttons_leds.start()
+    buttons_leds = ButtonsLEDController(moode_listener=moode_listener, config_path=config_path)
+    buttons_leds.start()
 
     # 18. Rotary callbacks (Unchanged from your code)
     def on_rotate(direction):
@@ -276,7 +276,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Shutting down Quoode...")
     finally:
-        #buttons_leds.stop()
+        buttons_leds.stop()
         rotary_control.stop()
         moode_listener.stop()
         clock.stop()
