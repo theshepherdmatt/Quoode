@@ -15,7 +15,6 @@ from display.display_manager import DisplayManager
 from correct_time import wait_for_correct_time
 from display.screens.clock import Clock
 from display.screens.original_screen import OriginalScreen
-from display.screens.webradio_screen import WebRadioScreen
 from display.screens.modern_screen import ModernScreen
 from managers.mode_manager import ModeManager
 from managers.menu_manager import MenuManager
@@ -204,7 +203,6 @@ def main():
 
     # Extract references if needed
     original_screen = manager_factory.original_screen
-    webradio_screen = manager_factory.webradio_screen
     modern_screen = manager_factory.modern_screen
     menu_manager = manager_factory.menu_manager
     playlist_manager = manager_factory.playlist_manager
@@ -228,9 +226,6 @@ def main():
         elif current_mode == 'modern':
             volume_change = 10 if direction == 1 else -10
             modern_screen.adjust_volume(volume_change)
-        elif current_mode == 'webradio':
-            volume_change = 10 if direction == 1 else -10
-            webradio_screen.adjust_volume(volume_change)
         elif current_mode == 'menu':
             menu_manager.scroll_selection(direction)
         else:
@@ -246,8 +241,6 @@ def main():
             original_screen.toggle_play_pause()
         elif current_mode == 'modern':
             modern_screen.toggle_play_pause()
-        elif current_mode == 'webradio':
-            webradio_screen.toggle_play_pause()
         elif current_mode == 'playback':
             original_screen.toggle_play_pause()
         else:
