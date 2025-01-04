@@ -64,6 +64,26 @@ check_root() {
 INSTALL_USER="${SUDO_USER:-$USER}"
 
 # ============================================
+#   Dynamically update config.yaml user path
+# ============================================
+update_config_yaml_user_path() {
+    log_progress "Dynamically updating config.yaml user path..."
+
+    local CONFIG_TEMPLATE="/home/$INSTALL_USER/Quoode/config_template.yaml"
+    local FINAL_CONFIG="/home/$INSTALL_USER/Quoode/config.yaml"
+
+    if [[ ! -f "$CONFIG_TEMPLATE" ]]; then
+        log_message "warning" "No config_template.yaml found, skipping dynamic user path substitution."
+        return
+    fi
+
+    # We'll replace any occurrences of {USER} with the actual username:
+    sed "s|{USER}|$INSTALL_USER|g" "$CONFIG_TEMPLATE" > "$FINAL_CONFIG"
+
+    log_message "success" "Created config.yaml with user=$INSTALL_USER replaced in paths."
+}
+
+# ============================================
 #    Enable or Disable Buttons & LEDs
 # ============================================
 configure_buttons_leds() {
@@ -325,6 +345,8 @@ set_permissions() {
 main() {
     log_message "info" "Starting the installation script..."
     check_root
+
+    update_config_yaml_user_path
 
     configure_buttons_leds
     enable_i2c_spi
