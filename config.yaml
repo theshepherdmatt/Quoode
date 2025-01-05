@@ -1,0 +1,84 @@
+pins:
+  clk_pin: 13
+  dt_pin: 5
+  sw_pin: 6
+
+moode:
+  host: localhost
+  port: 6600
+  connection_timeout: 5  # Timeout in seconds for moode API connection
+
+display:
+  icon_dir: "/home/matt/Quoode/src/assets/images"
+  default_album_art: "/home/matt/Quoode/src/assets/images/webradio.png"
+  loading_gif_path: "/home/matt/Quoode/src/assets/images/Loading.gif"
+  logo_path: "/home/matt/Quoode/src/assets/images/logo.png"  # Path relative to project root
+  rotation: 2  # Set rotation if needed (0, 90, 180, 270)
+  fonts:
+    playback_large:
+      path: "/home/matt/Quoode/src/assets/fonts/DSEG7Classic-Light.ttf"
+      size: 45
+    playback_medium:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 18
+    playback_small:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 12
+    artist_font:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 12
+    song_font:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 14
+    data_font:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 10
+    menu_font:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 12
+    menu_font_bold:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Bold.ttf"
+      size: 12
+    clock_large:
+      path: "/home/matt/Quoode/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
+      size: 35
+    sample_rate:
+      path: "/home/matt/Quoode/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
+      size: 46
+    sample_rate_khz:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 12
+    radio_title:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 15
+    radio_bitrate:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 12
+    volume_small:
+      path: "/home/matt/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 8
+  refresh_rate: 60  # Display refresh rate in Hz
+  cache_images: true
+  preload_images:
+    - "/home/matt/Quoode/src/assets/images/webradio.png"
+    - "/home/matt/Quoode/src/assets/images/mpd.png"
+    - "/home/matt/Quoode/src/assets/images/library.png"
+    - "/home/matt/Quoode/src/assets/images/stream.png"
+    - "/home/matt/Quoode/src/assets/images/tidal.png"
+    - "/home/matt/Quoode/src/assets/images/qobuz.png"
+    - "/home/matt/Quoode/src/assets/images/spop.png"
+    - "/home/matt/Quoode/src/assets/images/playlists.png"
+    - "/home/matt/Quoode/src/assets/images/default.png"
+    - "/home/matt/Quoode/src/assets/images/nas.png"
+    - "/home/matt/Quoode/src/assets/images/usb.png"
+    - "/home/matt/Quoode/src/assets/images/volume.png"
+    - "/home/matt/Quoode/src/assets/images/display.png"
+    - "/home/matt/Quoode/src/assets/images/displayfm4.png"
+    - "/home/matt/Quoode/src/assets/images/displaymodern.png"
+
+mcp23017_address: 0x20
+
+logging:
+  level: "DEBUG"  # Options: DEBUG, INFO, WARNING, ERROR
+  log_file: "/home/matt/Quoode/quoodeclean.log"
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

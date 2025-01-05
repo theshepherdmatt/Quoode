@@ -8,6 +8,7 @@ import logging
 import yaml
 import os
 import sys
+import subprocess
 from PIL import Image, ImageSequence
 
 # Importing components from the src directory
@@ -31,6 +32,8 @@ from hardware.buttonsleds import ButtonsLEDController
 from handlers.state_handler import StateHandler
 from managers.manager_factory import ManagerFactory
 
+last_volume_update = 0
+volume_update_cooldown = 0.2  # 200 ms
 
 def load_config(config_path='/config.yaml'):
     abs_path = os.path.abspath(config_path)
@@ -215,36 +218,50 @@ def main():
     buttons_leds.start()
 
     # 18. Rotary callbacks (Unchanged from your code)
+
     def on_rotate(direction):
+        global last_volume_update, volume_update_cooldown
+
         current_mode = mode_manager.get_mode()
-        if current_mode == 'original':
-            volume_change = 10 if direction == 1 else -10
-            original_screen.adjust_volume(volume_change)
-        elif current_mode == 'playback':
-            volume_change = 10 if direction == 1 else -10
-            original_screen.adjust_volume(volume_change)
-        elif current_mode == 'modern':
-            volume_change = 10 if direction == 1 else -10
-            modern_screen.adjust_volume(volume_change)
+        now = time.time()
+
+        # Only rotate volumes in playback modes
+        if current_mode in ['original', 'modern', 'playback']:
+            if now - last_volume_update > volume_update_cooldown:
+                # Decide whether to volume up or volume down by 5
+                if direction == 1:
+                    subprocess.run(["mpc", "volume", "+5"], check=False)
+                else:
+                    subprocess.run(["mpc", "volume", "-5"], check=False)
+
+                logger.info(f"Sent MPC volume command direction={direction}")
+                last_volume_update = now
+            else:
+                logger.debug("Skipping volume update (debounce in effect).")
+
         elif current_mode == 'menu':
             menu_manager.scroll_selection(direction)
+
         else:
             logger.warning(f"Unhandled mode: {current_mode}. No rotary action performed.")
 
     def on_button_press_inner():
         current_mode = mode_manager.get_mode()
+
         if current_mode == 'clock':
             mode_manager.to_menu()
+
         elif current_mode == 'menu':
             menu_manager.select_item()
-        elif current_mode == 'original':
-            original_screen.toggle_play_pause()
-        elif current_mode == 'modern':
-            modern_screen.toggle_play_pause()
-        elif current_mode == 'playback':
-            original_screen.toggle_play_pause()
+
+        elif current_mode in ['original', 'modern', 'playback']:
+            # Call `mpc toggle` to switch between play/pause
+            subprocess.run(["mpc", "toggle"], check=False)
+            logger.info("Toggled play/pause via `mpc toggle`.")
+
         else:
             logger.warning(f"Unhandled mode: {current_mode}. No button action performed.")
+
 
     def on_long_press():
         logger.info("Long button press detected.")
