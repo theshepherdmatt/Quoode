@@ -1,7 +1,6 @@
 [Unit]
 Description=Main Quoode Service
-After=network.target pigpiod.service
-
+After=network.target
 [Service]
 Type=simple
 User=__INSTALL_USER__
