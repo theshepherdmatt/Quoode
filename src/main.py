@@ -4,7 +4,7 @@ import time
 import threading
 import logging
 import yaml
-import json              # <-- Make sure we import json
+import json             
 import os
 import sys
 import subprocess

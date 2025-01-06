@@ -14,7 +14,9 @@ display:
   loading_gif_path: "/home/{USER}/Quoode/src/assets/images/Loading.gif"
   logo_path: "/home/{USER}/Quoode/src/assets/images/logo.png"  # Path relative to project root
   rotation: 2  # Set rotation if needed (0, 90, 180, 270)
+
   fonts:
+    # Playback / Menu / Data
     playback_large:
       path: "/home/{USER}/Quoode/src/assets/fonts/DSEG7Classic-Light.ttf"
       size: 45
@@ -39,9 +41,30 @@ display:
     menu_font_bold:
       path: "/home/{USER}/Quoode/src/assets/fonts/OpenSans-Bold.ttf"
       size: 12
-    clock_large:
-      path: "/home/{USER}/Quoode/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
-      size: 35
+
+    # Clock fonts (for hours/minutes)
+    clock_sans:
+      path: "/home/{USER}/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 40
+    clock_dots:
+      path: "/home/{USER}/Quoode/src/assets/fonts/led_counter-7.ttf"
+      size: 40
+    clock_digital:
+      path: "/home/{USER}/Quoode/src/assets/fonts/DSEG7Classic-Light.ttf"
+      size: 30
+
+    # Smaller date fonts (for optional date line)
+    clockdate_sans:
+      path: "/home/{USER}/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
+      size: 15
+    clockdate_dots:
+      path: "/home/{USER}/Quoode/src/assets/fonts/led_counter-7.ttf"
+      size: 15
+    clockdate_digital:
+      path: "/home/{USER}/Quoode/src/assets/fonts/DSEG7Classic-Light.ttf"
+      size: 10
+
+    # Sample rate / radio usage
     sample_rate:
       path: "/home/{USER}/Quoode/src/assets/fonts/DSEG7Classic-LightItalic.ttf"
       size: 46
@@ -57,24 +80,19 @@ display:
     volume_small:
       path: "/home/{USER}/Quoode/src/assets/fonts/OpenSans-Regular.ttf"
       size: 8
+
   refresh_rate: 60  # Display refresh rate in Hz
   cache_images: true
+
   preload_images:
-    - "/home/{USER}/Quoode/src/assets/images/webradio.png"
+    - "/home/{USER}/Quoode/src/assets/images/screensaver.png"
     - "/home/{USER}/Quoode/src/assets/images/mpd.png"
-    - "/home/{USER}/Quoode/src/assets/images/library.png"
-    - "/home/{USER}/Quoode/src/assets/images/stream.png"
-    - "/home/{USER}/Quoode/src/assets/images/tidal.png"
-    - "/home/{USER}/Quoode/src/assets/images/qobuz.png"
-    - "/home/{USER}/Quoode/src/assets/images/spop.png"
-    - "/home/{USER}/Quoode/src/assets/images/playlists.png"
+    - "/home/{USER}/Quoode/src/assets/images/clock.png"
     - "/home/{USER}/Quoode/src/assets/images/default.png"
     - "/home/{USER}/Quoode/src/assets/images/nas.png"
-    - "/home/{USER}/Quoode/src/assets/images/usb.png"
+    - "/home/{USER}/Quoode/src/assets/images/data.png"
     - "/home/{USER}/Quoode/src/assets/images/volume.png"
     - "/home/{USER}/Quoode/src/assets/images/display.png"
-    - "/home/{USER}/Quoode/src/assets/images/displayfm4.png"
-    - "/home/{USER}/Quoode/src/assets/images/displaymodern.png"
 
 mcp23017_address: 0x20
 
