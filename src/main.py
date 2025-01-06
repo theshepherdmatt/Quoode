@@ -16,10 +16,13 @@ from correct_time import wait_for_correct_time
 from display.screens.clock import Clock
 from display.screens.original_screen import OriginalScreen
 from display.screens.modern_screen import ModernScreen
-from display.screensavers.snakescreensaver import SnakeScreensaver
+from display.screensavers.snake_screensaver import SnakeScreensaver
+from display.screensavers.starfield_screensaver import StarfieldScreensaver
+from display.screensavers.bouncing_text_screensaver import BouncingTextScreensaver
 from managers.mode_manager import ModeManager
 from managers.menu_manager import MenuManager
 from managers.menus.clock_menu import ClockMenu
+from managers.menus.screensaver_menu import ScreensaverMenu
 from controls.rotary_control import RotaryControl
 
 # Moode-based MPD listener
@@ -225,9 +228,10 @@ def main():
     # If you need references:
     original_screen = manager_factory.original_screen
     modern_screen   = manager_factory.modern_screen
-    snakescreensaver   = manager_factory.snakescreensaver
+    screensaver   = manager_factory.screensaver
     menu_manager    = manager_factory.menu_manager
     clock_menu      = manager_factory.clock_menu
+    screensaver_menu = manager_factory.screensaver_menu
 
     # 17. Optional ButtonsLEDController
     # buttons_leds = ButtonsLEDController(moode_listener=moode_listener, config_path=config_path)
@@ -235,38 +239,53 @@ def main():
 
     last_interaction_time = time.time()
 
-    # 18. Rotary callbacks
-    def on_rotate(direction):
-        global last_interaction_time
-        last_interaction_time = time.time() 
-        global last_volume_update, volume_update_cooldown
-        current_mode = mode_manager.get_mode()
-        now = time.time()
 
-        if mode_manager.get_mode() == 'screensaver':
+    def on_rotate(direction):
+        """
+        Handle rotary turning events.
+        direction > 0 => rotating forward (clockwise)
+        direction < 0 => rotating backward (counter-clockwise)
+        """
+        global last_interaction_time, last_volume_update
+        now = time.time()
+        last_interaction_time = now
+
+        current_mode = mode_manager.get_mode()
+
+        # If we're in screensaver mode, exit immediately on any rotation
+        if current_mode == 'screensaver':
             mode_manager.exit_screensaver()
             return
 
+        # Volume control if we're in a playback-related screen
         if current_mode in ['original', 'modern', 'playback']:
             # Debounced volume adjustments
             if now - last_volume_update > volume_update_cooldown:
-                if direction == 1:
+                if direction > 0:
                     subprocess.run(["mpc", "volume", "+5"], check=False)
+                    logger.info("Sent MPC volume command +5")
                 else:
                     subprocess.run(["mpc", "volume", "-5"], check=False)
-                logger.info(f"Sent MPC volume command direction={direction}")
+                    logger.info("Sent MPC volume command -5")
                 last_volume_update = now
             else:
                 logger.debug("Skipping volume update (debounce).")
 
+        # If in menu mode, scroll the menu
         elif current_mode == 'menu':
             menu_manager.scroll_selection(direction)
 
+        # If in clockmenu mode, scroll clock menu
         elif current_mode == 'clockmenu':
             clock_menu.scroll_selection(direction)
 
+        # Optionally handle a screensavermenu state (if you created one):
+        elif current_mode == 'screensavermenu':
+            screensaver_menu.scroll_selection(direction)
+
         else:
             logger.warning(f"Unhandled mode: {current_mode}. No rotary action performed.")
+
 
     def on_button_press_inner():
         """
@@ -274,26 +293,37 @@ def main():
         """
         global last_interaction_time
         last_interaction_time = time.time()
+
         current_mode = mode_manager.get_mode()
 
         if current_mode == 'clock':
-            # from clock -> menu
+            # Pressing button on clock => go to main menu
             mode_manager.to_menu()
 
         elif current_mode == 'menu':
+            # Pressing button in menu => select current menu item
             menu_manager.select_item()
 
         elif current_mode == 'clockmenu':
-            # short-press in clock menu
+            # Pressing button in clock menu => confirm selection
             clock_menu.select_item()
 
         elif current_mode in ['original', 'modern', 'playback']:
-            # Toggle play/pause
+            # Toggle play/pause via MPC
             subprocess.run(["mpc", "toggle"], check=False)
             logger.info("Toggled play/pause via `mpc toggle`.")
 
+        elif current_mode == 'screensaver':
+            # Pressing button in screensaver => exit screensaver
+            mode_manager.exit_screensaver()
+
+        # If you have a separate screensavermenu state:
+        elif current_mode == 'screensavermenu':
+            screensaver_menu.select_item()
+
         else:
             logger.warning(f"Unhandled mode: {current_mode}. No button action performed.")
+
 
     def on_long_press():
         logger.info("Long button press detected.")

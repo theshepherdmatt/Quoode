@@ -30,7 +30,7 @@ class MenuManager:
         self.current_menu_items = ["Clock", "Screensaver", "Display", "System Data"]
 
         # Sub-menu for Display
-        self.display_menu_items = ["Contrast", "Fonts"]
+        self.display_menu_items = ["Modern", "Classic"]
 
         # Sub-menu for System Data
         self.system_data_items = ["CPU Temp", "IP Address"]
@@ -252,12 +252,10 @@ class MenuManager:
         time.sleep(0.2)
 
         if selected_item == "Clock":
-            # Move to the specialized clock menu in ModeManager
             self.mode_manager.to_clockmenu()
 
         elif selected_item == "Screensaver":
-            # Potential future feature or direct call
-            self.logger.info("TODO: Implement 'Screensaver' mode or function.")
+            self.mode_manager.to_screensavermenu()
 
         elif selected_item == "Display":
             # Sub-menu for things like Contrast, Fonts

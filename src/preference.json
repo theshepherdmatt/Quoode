@@ -1,6 +1,9 @@
 {
   "display_mode": "modern",
-  "clock_font_key": "clock_sans",
+  "clock_font_key": "clock_digital",
   "show_date": false,
-  "show_seconds": false
+  "show_seconds": false,
+  "screensaver_enabled": true,
+  "screensaver_type": "stars",
+  "screensaver_timeout": 15
 }
