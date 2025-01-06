@@ -1,4 +1,3 @@
-
 # src/managers/menu_manager.py
 
 import logging
@@ -7,7 +6,15 @@ import threading
 import time
 
 class MenuManager:
-    def __init__(self, display_manager, moode_listener, mode_manager, window_size=5, menu_type="icon_row"):
+    def __init__(self, display_manager, moode_listener, mode_manager,
+                 window_size=5, menu_type="icon_row"):
+        """
+        :param display_manager: DisplayManager instance (controls OLED)
+        :param moode_listener:  MoodeListener instance (if needed for integration)
+        :param mode_manager:    ModeManager (for state transitions like to_clockmenu, etc.)
+        :param window_size:     How many icons to show at once before scrolling
+        :param menu_type:       'icon_row' or other style (not fully implemented here)
+        """
         self.display_manager = display_manager
         self.moode_listener = moode_listener
         self.mode_manager = mode_manager
@@ -18,40 +25,53 @@ class MenuManager:
         self.logger.info("MenuManager initialized.")
 
         # Menu initialization
+        # For your top-level menu items:
         self.menu_stack = []
-        self.current_menu_items = ["Stream", "Library", "Playlists", "Radio", "Display"]  # Added Display menu
-        self.stream_menu_items = ["Tidal", "Qobuz", "Spotify"]
-        self.library_menu_items = ["NAS", "USB"]
-        self.display_menu_items = ["Original", "Modern"]  # New Display sub-menu
+        self.current_menu_items = ["Clock", "Screensaver", "Display", "System Data"]
+
+        # Sub-menu for Display
+        self.display_menu_items = ["Contrast", "Fonts"]
+
+        # Sub-menu for System Data
+        self.system_data_items = ["CPU Temp", "IP Address"]
+
+        # Icons dictionary — fill in keys for every item you have icons for
         self.icons = {
-            "Stream": self.display_manager.icons.get("stream"),
-            "Library": self.display_manager.icons.get("library"),
-            "Radio": self.display_manager.icons.get("webradio"),
-            "Playlists": self.display_manager.icons.get("playlists"),
-            "Tidal": self.display_manager.icons.get("tidal"),
-            "Qobuz": self.display_manager.icons.get("qobuz"),
-            "Spotify": self.display_manager.icons.get("spop"),
-            "NAS": self.display_manager.icons.get("nas"), 
-            "USB": self.display_manager.icons.get("usb"),
-            "Display": self.display_manager.icons.get("display"),  # Icon for Display menu
-            "Original": self.display_manager.icons.get("display"),  # Icon for Original
-            "Modern": self.display_manager.icons.get("display")  # Icon for Modern
+            "Clock":       self.display_manager.icons.get("clock"),
+            "Screensaver": self.display_manager.icons.get("screensaver"),
+            "Display":     self.display_manager.icons.get("display"),
+            "System Data": self.display_manager.icons.get("data"),
+
+            "Contrast":    self.display_manager.icons.get("contrast"),
+            "Fonts":       self.display_manager.icons.get("fonts"),
+
+            "CPU Temp":    self.display_manager.icons.get("cpu"),
+            "IP Address":  self.display_manager.icons.get("ip"),
         }
+
+        # Selection and layout
         self.current_selection_index = 0
         self.is_active = False
         self.window_size = window_size
         self.window_start_index = 0
         self.menu_type = menu_type
+
+        # Font keys in display_manager
         self.font_key = 'menu_font'
         self.bold_font_key = 'menu_font_bold'
+
+        # Thread-safe rendering
         self.lock = threading.Lock()
 
-        # Register mode change callback if available
+        # If ModeManager supports a callback for mode changes
         if hasattr(self.mode_manager, "add_on_mode_change_callback"):
             self.mode_manager.add_on_mode_change_callback(self.handle_mode_change)
 
-
     def handle_mode_change(self, current_mode):
+        """
+        Called if mode_manager triggers a mode change callback.
+        If we enter 'menu' mode, we start. Otherwise, we stop.
+        """
         self.logger.info(f"MenuManager handling mode change to: {current_mode}")
         if current_mode == "menu":
             self.start_mode()
@@ -59,15 +79,23 @@ class MenuManager:
             self.stop_mode()
 
     def start_mode(self):
+        """
+        Called when user (short press from clock, etc.) triggers menu mode.
+        Resets to top-level menu and displays it in a background thread.
+        """
         self.is_active = True
-        # Reset to top-level menu items
-        self.current_menu_items = ["Stream", "Library", "Playlists", "Radio", "Display"]
+        # Reset top-level items
+        self.current_menu_items = ["Clock", "Screensaver", "Display", "System Data"]
         self.current_selection_index = 0
         self.window_start_index = 0
-        # Schedule display_menu without blocking
+
+        # Start background thread to render menu
         threading.Thread(target=self.display_menu, daemon=True).start()
 
     def stop_mode(self):
+        """
+        Deactivate the menu and clear the screen.
+        """
         if not self.is_active:
             return
         self.is_active = False
@@ -76,191 +104,206 @@ class MenuManager:
         self.logger.info("MenuManager: Stopped menu mode and cleared display.")
 
     def display_menu(self):
+        """
+        Renders the menu UI based on self.menu_type (e.g. 'icon_row').
+        """
         if self.menu_type == "icon_row":
             self.display_icon_row_menu()
 
     def display_icon_row_menu(self):
+        """
+        Icon-based row menu, with a highlight for the selected item.
+        """
         with self.lock:
-            # Calculate the visible window based on current selection
+            # Determine which items are visible based on window_size
             visible_items = self.get_visible_window(self.current_menu_items, self.window_size)
 
-            # Constants for layout
-            icon_size = 30  # Fixed size for icons
-            spacing = 15    # Fixed spacing between icons for better horizontal separation
+            icon_size = 30
+            spacing = 15
             total_width = self.display_manager.oled.width
             total_height = self.display_manager.oled.height
 
-            # Calculate the total width for the visible items (icon + spacing)
-            total_icons_width = len(visible_items) * icon_size + (len(visible_items) - 1) * spacing
+            total_icons_width = len(visible_items) * icon_size \
+                                + (len(visible_items) - 1) * spacing
 
-            # X offset to center the visible items on the screen
+            # Center them horizontally
             x_offset = (total_width - total_icons_width) // 2
+            # A slight upward shift if you want
+            y_position = (total_height - icon_size) // 2 - 10
 
-            # Y position for the icons
-            y_position = (total_height - icon_size) // 2 - 10  # Adjust as needed for vertical centering
-
-            # Create an image to draw on
+            # Make a fresh image to draw on
             base_image = Image.new("RGB", self.display_manager.oled.size, "black")
             draw_obj = ImageDraw.Draw(base_image)
 
-            # Iterate over visible items to draw icons
+            # Iterate over the visible items
             for i, item in enumerate(visible_items):
                 actual_index = self.window_start_index + i
-                icon = self.icons.get(item, self.display_manager.default_icon)
 
-                # Handle transparency for icons with an alpha channel
+                # Get icon or fallback
+                icon = self.icons.get(item, self.display_manager.default_icon)
+                if icon is None:
+                    self.logger.warning(f"No icon found for '{item}'. Using placeholder.")
+                    # Create a grey placeholder
+                    icon = Image.new("RGB", (30, 30), "grey")
+
+                # Flatten alpha if needed
                 if icon.mode == "RGBA":
                     background = Image.new("RGB", icon.size, (0, 0, 0))
                     background.paste(icon, mask=icon.split()[3])
                     icon = background
 
-                # Resize the icon with anti-aliasing
+                # Resize icon
                 icon = icon.resize((icon_size, icon_size), Image.LANCZOS)
 
-                # Calculate x-coordinate for the current icon
+                # X coordinate for this icon
                 x = x_offset + i * (icon_size + spacing)
 
-                # Adjust position of the selected item to "pop out" slightly
+                # If selected, "pop" it up by 5 pixels
                 if actual_index == self.current_selection_index:
-                    y_adjustment = -5  # Move the selected icon up slightly
-                    # Optionally, add a highlight or border around the selected icon
-                    border_size = 0
-                    # Draw a rectangle around the selected icon
-                    draw_obj.rectangle(
-                        [x - border_size, y_position - border_size + y_adjustment,
-                        x + icon_size + border_size, y_position + icon_size + border_size + y_adjustment],
-                        outline="black",
-                        width=border_size
-                    )
+                    y_adjustment = -5
                 else:
-                    y_adjustment = 0  # Keep other icons at the normal position
+                    y_adjustment = 0
 
-                # Paste the icon onto the base image
+                # Paste icon
                 base_image.paste(icon, (x, y_position + y_adjustment))
 
-                # Draw label only for the selected item
+                # If it's the selected item, draw a label below
                 if actual_index == self.current_selection_index:
                     label = item
-                    # Use bold font for selected item if available
-                    font = self.display_manager.fonts.get(self.bold_font_key, self.display_manager.fonts.get(self.font_key, ImageFont.load_default()))
-                    text_color = "white"  # Consistent color for selected text
+                    font = self.display_manager.fonts.get(
+                        self.bold_font_key,
+                        self.display_manager.fonts.get(self.font_key, ImageFont.load_default())
+                    )
+                    text_color = "white"
 
-                    # Calculate text size
                     text_width = draw_obj.textlength(label, font=font)
                     text_x = x + (icon_size - text_width) // 2
-                    text_y = y_position + icon_size + 5  # Increased vertical gap for text
+                    text_y = y_position + icon_size + 5
 
-                    # Draw the label
                     draw_obj.text((text_x, text_y), label, font=font, fill=text_color)
 
-            # Convert the image to the OLED display mode and render it
+            # Now display it
             base_image = base_image.convert(self.display_manager.oled.mode)
             self.display_manager.oled.display(base_image)
             self.logger.info("MenuManager: Icon row menu displayed with selected text only.")
 
-
     def get_visible_window(self, items, window_size):
-        # Calculate half window size
+        """
+        Return a subset of items to center the selected index in the window.
+        """
         half_window = window_size // 2
-
-        # Set window_start_index so that the selected item is centered
         self.window_start_index = self.current_selection_index - half_window
 
-        # Ensure window_start_index is within bounds
         if self.window_start_index < 0:
             self.window_start_index = 0
         elif self.window_start_index + window_size > len(items):
             self.window_start_index = max(len(items) - window_size, 0)
 
-        return items[self.window_start_index:self.window_start_index + window_size]
+        return items[self.window_start_index : self.window_start_index + window_size]
 
     def scroll_selection(self, direction):
+        """
+        Rotary rotation => move selection up or down.
+        direction > 0 => next item, direction < 0 => previous item.
+        """
         if not self.is_active:
             return
 
-        previous_index = self.current_selection_index
+        old_index = self.current_selection_index
         self.current_selection_index += direction
-
-        # Clamp the selection index within valid range
-        self.current_selection_index = max(0, min(self.current_selection_index, len(self.current_menu_items) - 1))
+        # Clamp
+        self.current_selection_index = max(
+            0, min(self.current_selection_index, len(self.current_menu_items) - 1)
+        )
 
         self.logger.info(
-            f"MenuManager: Scrolled from {previous_index} to {self.current_selection_index}. "
+            f"MenuManager: Scrolled from {old_index} to {self.current_selection_index}. "
             f"Current menu items: {self.current_menu_items}"
         )
 
-        # Recalculate window_start_index to center the selection
-        self.window_start_index = self.current_selection_index - self.window_size // 2
-        self.window_start_index = max(0, min(self.window_start_index, len(self.current_menu_items) - self.window_size))
+        # Re-center
+        self.window_start_index = self.current_selection_index - (self.window_size // 2)
+        self.window_start_index = max(
+            0, min(self.window_start_index, len(self.current_menu_items) - self.window_size)
+        )
 
+        # Re-draw the menu
         self.display_menu()
-       
+
     def select_item(self):
+        """
+        A short press => select the item under highlight.
+        """
         if not self.is_active or not self.current_menu_items:
             return
+
         selected_item = self.current_menu_items[self.current_selection_index]
         self.logger.info(f"MenuManager: Selected menu item: {selected_item}")
 
-        # Schedule mode change without blocking
+        # Avoid blocking UI by using a thread
         threading.Thread(target=self._handle_selection, args=(selected_item,), daemon=True).start()
 
     def _handle_selection(self, selected_item):
-        # Adding a short delay to prevent accidental fast actions
+        """
+        Perform the action associated with the chosen menu item.
+        E.g. sub-menu logic or transitions into ModeManager states.
+        """
+        # Add a small delay to avoid accidental double-press
         time.sleep(0.2)
 
-        if selected_item == "Radio":
-            self.mode_manager.to_webradio()
-        elif selected_item == "Playlists":
-            self.mode_manager.to_playlists()
-        elif selected_item == "Stream":
-            # Navigate into Stream menu
-            self.menu_stack.append(self.current_menu_items)
-            self.current_menu_items = self.stream_menu_items
-            self.current_selection_index = 0
-            self.window_start_index = 0
-            self.display_menu()
-        elif selected_item == "Library":
-            # Navigate into Library menu (with NAS and USB options)
-            self.menu_stack.append(self.current_menu_items)
-            self.current_menu_items = self.library_menu_items
-            self.current_selection_index = 0
-            self.window_start_index = 0
-            self.display_menu()
+        if selected_item == "Clock":
+            # Move to the specialized clock menu in ModeManager
+            self.mode_manager.to_clockmenu()
+
+        elif selected_item == "Screensaver":
+            # Potential future feature or direct call
+            self.logger.info("TODO: Implement 'Screensaver' mode or function.")
+
         elif selected_item == "Display":
-            # Navigate into Display menu (with Original and Modern options)
-            self.menu_stack.append(self.current_menu_items)
+            # Sub-menu for things like Contrast, Fonts
+            self.menu_stack.append(list(self.current_menu_items))
             self.current_menu_items = self.display_menu_items
             self.current_selection_index = 0
             self.window_start_index = 0
             self.display_menu()
 
-        if selected_item == "Original":
-            # Set the current display mode
-            self.mode_manager.set_display_mode('original')
-            # Preview the original screen mode
-            self.mode_manager.to_original()
-            self.logger.info("MenuManager: Switching display mode to Original.")
-            # Return to menu if desired, or just stay here
-            self.mode_manager.to_clock()
+        elif selected_item == "System Data":
+            # Sub-menu for CPU Temp, IP
+            self.menu_stack.append(list(self.current_menu_items))
+            self.current_menu_items = self.system_data_items
+            self.current_selection_index = 0
+            self.window_start_index = 0
+            self.display_menu()
 
-        elif selected_item == "Modern":
-            # Set the current display mode
-            self.mode_manager.set_display_mode('modern')
-            # Preview the modern screen mode
-            self.mode_manager.to_modern()
-            self.logger.info("MenuManager: Switching display mode to Modern.")
-            # Return to menu if desired
-            self.mode_manager.to_clock()
-            
-        elif selected_item == "NAS":
-            self.mode_manager.to_library(start_uri="music-library/NAS")
-            self.logger.info("Library Manager for NAS activated.")
-        elif selected_item == "USB":
-            self.mode_manager.to_library(start_uri="music-library/USB")
-            self.logger.info("USB Library Manager activated.")
-        elif selected_item == "Tidal":
-            self.mode_manager.to_tidal()
-        elif selected_item == "Qobuz":
-            self.mode_manager.to_qobuz()
-        elif selected_item == "Spotify":
-            self.mode_manager.to_spotify()
+        # Sub-menu items
+        elif selected_item == "Contrast":
+            self.logger.info("TODO: Adjust display contrast here, e.g. self.display_manager.set_contrast(...).")
+
+        elif selected_item == "Fonts":
+            self.logger.info("TODO: Manage global font styles from here if desired.")
+
+        elif selected_item == "CPU Temp":
+            self.logger.info("TODO: Show CPU temperature, or run a command to read CPU info.")
+
+        elif selected_item == "IP Address":
+            self.logger.info("TODO: Display IP info, e.g. run `hostname -I` or similar.")
+
+        # Potentially, you could auto-return to main menu or clock
+        # self.mode_manager.to_clock()
+
+    # Optional method to navigate back if you want a "Back" item in sub-menus
+    def navigate_back(self):
+        """
+        Example if you add a 'Back' item in sub-menu:
+        """
+        if not self.menu_stack:
+            # Already at top-level
+            self.logger.info("MenuManager: Already at top-level, nothing to go back to.")
+            return
+
+        # Pop from stack
+        previous_items = self.menu_stack.pop()
+        self.current_menu_items = previous_items
+        self.current_selection_index = 0
+        self.window_start_index = 0
+        self.display_menu()

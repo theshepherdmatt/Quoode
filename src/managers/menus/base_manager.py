@@ -19,9 +19,9 @@ class SingletonMeta(type):
 
 
 class BaseManager(ABC):
-    def __init__(self, display_manager, volumio_listener, mode_manager):
+    def __init__(self, display_manager, moode_listener, mode_manager):
         self.display_manager = display_manager
-        self.volumio_listener = volumio_listener
+        self.moode_listener = moode_listener
         self.mode_manager = mode_manager
         self.is_active = False
         self.on_mode_change_callbacks = []
