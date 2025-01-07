@@ -90,7 +90,9 @@ def main():
     config = load_config(config_path)
 
     # 2a. Load JSON-based user preferences
-    preferences = load_preferences("/home/matt/Quoode/src/preference.json")
+    home_dir = os.path.expanduser("~")  
+    pref_path = os.path.join(home_dir, "Quoode", "src", "preference.json")
+    preferences = load_preferences(pref_path)
 
     # 2b. Merge preferences into config, so user overrides appear in config
     config.update(preferences)

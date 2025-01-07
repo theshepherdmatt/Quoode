@@ -5,5 +5,5 @@
   "show_seconds": false,
   "screensaver_enabled": true,
   "screensaver_type": "snake",
-  "screensaver_timeout": 15
+  "screensaver_timeout": 360
 }
