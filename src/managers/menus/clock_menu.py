@@ -15,7 +15,6 @@ class ClockMenu(BaseManager):
       - Show Seconds (toggle)
       - Show Date (toggle)
       - Select Font => [Sans, Dots, Digital]
-      - Analogue Clock (toggle between digital and analogue)
     """
 
     def __init__(
@@ -53,12 +52,10 @@ class ClockMenu(BaseManager):
         self.line_spacing = line_spacing
 
         # Define the main items (top-level) & the font sub-menu
-        # ADD "Analogue Clock" ITEM HERE:
         self.main_items = [
             "Show Seconds",
             "Show Date",
-            "Select Font",
-            "Analogue Clock"
+            "Select Font"
         ]
         self.font_items = ["Sans", "Dots", "Digital"]
 
@@ -245,7 +242,6 @@ class ClockMenu(BaseManager):
          - Show Seconds
          - Show Date
          - Select Font
-         - Analogue Clock
         """
         if item == "Show Seconds":
             current_val = self.mode_manager.config.get("show_seconds", False)
@@ -275,17 +271,6 @@ class ClockMenu(BaseManager):
             self.current_selection_index = 0
             self.window_start_index = 0
             self.display_current_menu()
-
-        elif item == "Analogue Clock":
-            # Toggle the user config for analogue vs. digital
-            current_val = self.mode_manager.config.get("use_analog_clock", False)
-            new_val = not current_val
-            self.mode_manager.config["use_analog_clock"] = new_val
-            self.logger.info(f"ClockMenu: use_analog_clock toggled to {new_val}")
-
-            # Save and return to normal clock
-            self.mode_manager.save_preferences()
-            self.mode_manager.to_clock()
 
         else:
             self.logger.warning(f"ClockMenu: Unknown clock_main item '{item}'")
