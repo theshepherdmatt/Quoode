@@ -90,7 +90,7 @@ def main():
     config = load_config(config_path)
 
     # 2a. Load JSON-based user preferences
-    preferences = load_preferences("Quoode/src/preference.json")
+    preferences = load_preferences("/home/matt/Quoode/src/preference.json")
 
     # 2b. Merge preferences into config, so user overrides appear in config
     config.update(preferences)
@@ -297,8 +297,9 @@ def main():
         current_mode = mode_manager.get_mode()
 
         if current_mode == 'clock':
-            # Pressing button on clock => go to main menu
-            mode_manager.to_menu()
+            # Short press in clock => toggle play/pause
+            subprocess.run(["mpc", "toggle"], check=False)
+            logger.info("Toggled play/pause in clock mode via `mpc toggle`.")
 
         elif current_mode == 'menu':
             # Pressing button in menu => select current menu item
@@ -311,26 +312,37 @@ def main():
         elif current_mode in ['original', 'modern', 'playback']:
             # Toggle play/pause via MPC
             subprocess.run(["mpc", "toggle"], check=False)
-            logger.info("Toggled play/pause via `mpc toggle`.")
+            logger.info("Toggled play/pause in playback screen via `mpc toggle`.")
 
         elif current_mode == 'screensaver':
             # Pressing button in screensaver => exit screensaver
             mode_manager.exit_screensaver()
 
-        # If you have a separate screensavermenu state:
         elif current_mode == 'screensavermenu':
+            # If you have a separate screensavermenu state
             screensaver_menu.select_item()
 
         else:
             logger.warning(f"Unhandled mode: {current_mode}. No button action performed.")
 
-
     def on_long_press():
+        """
+        Handle long press of the rotary button.
+        """
         logger.info("Long button press detected.")
         current_mode = mode_manager.get_mode()
-        if current_mode != 'clock':
-            mode_manager.to_clock()
-            logger.info("ModeManager: Switched to clock mode via long press.")
+
+        # Only if we’re in clock mode, go to menu.
+        # If you want to do something else in other modes, add conditions below.
+        if current_mode == 'clock':
+            mode_manager.to_menu()
+            logger.info("Long press in clock => switched to menu.")
+        else:
+            logger.info(f"Long press in '{current_mode}' mode => no special action or go to clock.")
+            # If you like, you could do:
+            # mode_manager.to_clock()
+            # logger.info("Switched to clock via long press.")
+
 
     # 19. RotaryControl
     rotary_control = RotaryControl(
@@ -366,6 +378,8 @@ def main():
         rotary_control.stop()
         moode_listener.stop()
         clock.stop()
+        if screensaver is not None:
+            screensaver.stop_screensaver()
         display_manager.clear_screen()
         logger.info("Quoode has been shut down gracefully.")
 

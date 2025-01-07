@@ -108,7 +108,7 @@ class ModeManager:
 
         # Idle / screensaver logic (optional)
         self.idle_timer = None
-        self.idle_timeout = self.config.get("screensaver_timeout", 15)  # fallback 60s for testing
+        self.idle_timeout = self.config.get("screensaver_timeout", 360)  # fallback 60s for testing
 
     # -----------------------------------------------------------------
     #  Boot State
@@ -294,7 +294,7 @@ class ModeManager:
             else:
                 self.logger.error("ModeManager: original_screen not set.")
 
-        self.reset_idle_timer()
+        #self.reset_idle_timer()
 
     def enter_menu(self, event):
         """
@@ -403,7 +403,7 @@ class ModeManager:
         else:
             self.logger.error("ModeManager: original_screen is not set.")
 
-        self.reset_idle_timer()
+        #self.reset_idle_timer()
 
     def enter_modern(self, event):
         """
@@ -428,7 +428,7 @@ class ModeManager:
         else:
             self.logger.error("ModeManager: modern_screen is not set.")
 
-        self.reset_idle_timer()
+        #self.reset_idle_timer()
 
     def enter_screensaver(self, event):
         """
@@ -536,13 +536,15 @@ class ModeManager:
     def _idle_timeout_reached(self):
         """
         If there's no user interaction and idle timer elapses,
-        go to screensaver if not already there.
+        only go to screensaver if we're currently in clock mode.
         """
         with self.lock:
-            # If we're not already in screensaver mode, switch
-            if self.get_mode() != "screensaver":
-                self.logger.debug("ModeManager: Idle timeout -> switching to screensaver.")
+            current_mode = self.get_mode()
+            if current_mode == "clock":
+                self.logger.debug("ModeManager: Idle timeout -> switching to screensaver (only in clock mode).")
                 self.to_screensaver()
+            else:
+                self.logger.debug(f"ModeManager: Idle timeout in '{current_mode}' mode; NOT going to screensaver.")
 
     # -----------------------------------------------------------------
     #  Suppression logic (optional)

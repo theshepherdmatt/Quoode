@@ -1,9 +1,9 @@
 {
   "display_mode": "modern",
-  "clock_font_key": "clock_digital",
+  "clock_font_key": "clock_sans",
   "show_date": false,
   "show_seconds": false,
   "screensaver_enabled": true,
-  "screensaver_type": "stars",
+  "screensaver_type": "snake",
   "screensaver_timeout": 15
 }
