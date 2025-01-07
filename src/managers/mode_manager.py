@@ -223,6 +223,9 @@ class ModeManager:
     def set_screensaver_menu(self, screensaver_menu):
         self.screensaver_menu = screensaver_menu
 
+    def set_analog_clock(self, analog_clock):
+        self.analog_clock = analog_clock
+
     # -----------------------------------------------------------------
     #  Helper
     # -----------------------------------------------------------------
@@ -238,11 +241,12 @@ class ModeManager:
     def enter_clock(self, event):
         """
         Called when the state machine transitions to 'clock'.
-        Stop all other screens/managers and start the clock.
+        Stop all other screens/managers and start either digital or analogue clock
+        based on user preference.
         """
         self.logger.info("ModeManager: Entering clock mode.")
 
-        # Stop other managers
+        # 1) Stop other managers/menus
         if self.menu_manager and self.menu_manager.is_active:
             self.menu_manager.stop_mode()
         if self.clock_menu and self.clock_menu.is_active:
@@ -253,22 +257,44 @@ class ModeManager:
             self.modern_screen.stop_mode()
         if self.original_screen and self.original_screen.is_active:
             # Some screens might gracefully handle "stop_mode" themselves.
-            # If original_screen is playing, you might not want to stop it automatically.
             pass
 
-        # If screensaver is running, stop it
+        # 2) If screensaver is running, stop it
         if self.screensaver:
             self.screensaver.stop_screensaver()
 
-        # Start the clock
-        if self.clock:
-            self.clock.config = self.config
-            self.clock.start()
-        else:
-            self.logger.error("ModeManager: No Clock instance to start.")
+        # 3) Check user preference for analogue vs. digital
+        use_analog = self.config.get("use_analog_clock", False)
 
-        # Optionally start idle timer if screensaver is enabled
-        self.reset_idle_timer()
+        if use_analog:
+            # ---- Start Analogue Clock ----
+            self.logger.info("ModeManager: Using analogue clock.")
+            # If we haven't created self.analog_clock yet, create it.
+            if not hasattr(self, "analog_clock") or self.analog_clock is None:
+                from display.screens.analog_clock import AnalogClock
+                self.analog_clock = AnalogClock(self.display_manager, update_interval=1.0)
+
+            # Now start the analogue clock
+            self.analog_clock.start()
+
+        else:
+            # ---- Start Digital Clock ----
+            self.logger.info("ModeManager: Using digital clock.")
+            # Stop the analogue clock if it's running
+            if hasattr(self, "analog_clock") and self.analog_clock and self.analog_clock.is_running:
+                self.logger.debug("ModeManager: Stopping analogue clock because digital is selected.")
+                self.analog_clock.stop()
+
+            # If we have a digital clock instance, start it
+            if self.clock:
+                self.clock.config = self.config
+                self.clock.start()
+            else:
+                self.logger.error("ModeManager: No Clock instance to start.")
+
+        # 4) Optionally start idle timer if screensaver is enabled
+        #self.reset_idle_timer()
+
 
     def enter_playback(self, event):
         """

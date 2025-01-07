@@ -14,6 +14,7 @@ from PIL import Image, ImageSequence
 from display.display_manager import DisplayManager
 from correct_time import wait_for_correct_time
 from display.screens.clock import Clock
+from display.screens.analog_clock import AnalogClock
 from display.screens.original_screen import OriginalScreen
 from display.screens.modern_screen import ModernScreen
 from display.screensavers.snake_screensaver import SnakeScreensaver
@@ -233,6 +234,7 @@ def main():
     screensaver   = manager_factory.screensaver
     menu_manager    = manager_factory.menu_manager
     clock_menu      = manager_factory.clock_menu
+    analog_clock  = manager_factory.analog_clock
     screensaver_menu = manager_factory.screensaver_menu
 
     # 17. Optional ButtonsLEDController

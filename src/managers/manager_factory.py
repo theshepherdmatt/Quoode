@@ -1,12 +1,11 @@
+# src/managers/manager_factory.py
+
 import logging
 from .menus.clock_menu import ClockMenu
 from .menus.screensaver_menu import ScreensaverMenu
+from display.screens.analog_clock import AnalogClock
 from display.screens.modern_screen import ModernScreen
 from display.screens.original_screen import OriginalScreen
-
-# Remove or move these imports if you prefer a single dynamic import:
-# from display.screensavers.screensaver import Screensaver
-# from display.screensavers.snake_screensaver import SnakeScreensaver
 
 class ManagerFactory:
     def __init__(self, display_manager, moode_listener, mode_manager, config):
@@ -24,25 +23,29 @@ class ManagerFactory:
         self.modern_screen = None
         self.menu_manager = None
         self.clock_menu = None
+        self.screensaver_menu = None
         self.screensaver = None
+        self.analog_clock = None
 
     def setup_mode_manager(self):
         """
         Instantiates and configures all screens/managers, then registers
         them with ModeManager so it can transition between them.
         """
-        self.original_screen = self.create_original_screen()
-        self.modern_screen = self.create_modern_screen()
-        self.menu_manager = self.create_menu_manager()
-        self.clock_menu = self.create_clock_menu()
-        self.screensaver_menu = self.create_screensaver_menu()
-        self.screensaver = self.create_screensaver() 
+        self.original_screen   = self.create_original_screen()
+        self.modern_screen     = self.create_modern_screen()
+        self.menu_manager      = self.create_menu_manager()
+        self.clock_menu        = self.create_clock_menu()
+        self.analog_clock      = self.create_analog_clock()      # <--- NEW
+        self.screensaver_menu  = self.create_screensaver_menu()
+        self.screensaver       = self.create_screensaver()
 
         # Assign them to the ModeManager
         self.mode_manager.set_original_screen(self.original_screen)
         self.mode_manager.set_modern_screen(self.modern_screen)
         self.mode_manager.set_menu_manager(self.menu_manager)
         self.mode_manager.set_clock_menu(self.clock_menu)
+        self.mode_manager.set_analog_clock(self.analog_clock)    # <--- NEW
         self.mode_manager.set_screensaver_menu(self.screensaver_menu)
         self.mode_manager.set_screensaver(self.screensaver)
 
@@ -64,7 +67,7 @@ class ManagerFactory:
         Create and return a ClockMenu instance (for clock settings).
         """
         self.logger.debug("Creating ClockMenu instance.")
-        from .menus.clock_menu import ClockMenu  # or adapt path
+        from .menus.clock_menu import ClockMenu
         return ClockMenu(
             display_manager=self.display_manager,
             mode_manager=self.mode_manager,
@@ -72,13 +75,13 @@ class ManagerFactory:
             y_offset=2,
             line_spacing=15
         )
-    
+
     def create_screensaver_menu(self):
         """
         Create and return a ScreenSaverMenu instance (for display settings).
         """
         self.logger.debug("Creating ScreenSaverMenu instance.")
-        from .menus.screensaver_menu import ScreensaverMenu  # or adapt path
+        from .menus.screensaver_menu import ScreensaverMenu
         return ScreensaverMenu(
             display_manager=self.display_manager,
             mode_manager=self.mode_manager,
@@ -109,6 +112,17 @@ class ManagerFactory:
             self.mode_manager
         )
 
+    def create_analog_clock(self):
+        """
+        Create and return an AnalogClock instance, if you want to
+        have an analogue option.
+        """
+        self.logger.debug("Creating AnalogClock instance.")
+        return AnalogClock(
+            self.display_manager,
+            update_interval=1.0
+        )
+
     def create_screensaver(self):
         """
         Dynamically load a screensaver class based on `screensaver_type`
@@ -118,26 +132,21 @@ class ManagerFactory:
         screensaver_type = self.config.get("screensaver_type", "generic").lower()
 
         if screensaver_type == "snake":
-            # 1) SnakeScreensaver
             from display.screensavers.snake_screensaver import SnakeScreensaver
             self.logger.info("ManagerFactory: Using SnakeScreensaver.")
             return SnakeScreensaver(
                 display_manager=self.display_manager,
                 update_interval=0.04
             )
-
         elif screensaver_type in ("stars", "starfield"):
-            # 2) StarfieldScreensaver
             from display.screensavers.starfield_screensaver import StarfieldScreensaver
             self.logger.info("ManagerFactory: Using StarfieldScreensaver.")
             return StarfieldScreensaver(
                 display_manager=self.display_manager,
-                num_stars=40,         
+                num_stars=40,
                 update_interval=0.05
             )
-
         elif screensaver_type in ("quoode", "bouncing_text"):
-            # 3) BouncingTextScreensaver
             from display.screensavers.bouncing_text_screensaver import BouncingTextScreensaver
             self.logger.info("ManagerFactory: Using BouncingTextScreensaver.")
             return BouncingTextScreensaver(
@@ -145,9 +154,7 @@ class ManagerFactory:
                 text="Quoode",
                 update_interval=0.06
             )
-
         else:
-            # Fallback to a generic Screensaver
             from display.screensavers.screensaver import Screensaver
             self.logger.info(f"ManagerFactory: Using generic Screensaver (type={screensaver_type}).")
             return Screensaver(

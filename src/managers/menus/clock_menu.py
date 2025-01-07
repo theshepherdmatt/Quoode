@@ -1,10 +1,10 @@
 # src/managers/menus/clock_menu.py
 
-from managers.menus.base_manager import BaseManager
 import logging
-from PIL import ImageFont
-import threading
 import time
+from PIL import ImageFont
+
+from managers.menus.base_manager import BaseManager
 
 class ClockMenu(BaseManager):
     """
@@ -15,6 +15,7 @@ class ClockMenu(BaseManager):
       - Show Seconds (toggle)
       - Show Date (toggle)
       - Select Font => [Sans, Dots, Digital]
+      - Analogue Clock (toggle between digital and analogue)
     """
 
     def __init__(
@@ -28,11 +29,10 @@ class ClockMenu(BaseManager):
         """
         :param display_manager: The DisplayManager (controls the OLED).
         :param mode_manager:    The ModeManager (for global transitions, config storage, etc.).
-        :param window_size:     Number of lines to display at once in the text-list.
+        :param window_size:     Number of text lines to display at once in the text-list.
         :param y_offset:        Vertical offset for first line.
         :param line_spacing:    Spacing in pixels between lines of text.
         """
-        # Inherit from BaseManager with moode_listener=None (not needed here):
         super().__init__(display_manager, None, mode_manager)
 
         self.mode_name = "clock_menu"
@@ -53,7 +53,13 @@ class ClockMenu(BaseManager):
         self.line_spacing = line_spacing
 
         # Define the main items (top-level) & the font sub-menu
-        self.main_items = ["Show Seconds", "Show Date", "Select Font"]
+        # ADD "Analogue Clock" ITEM HERE:
+        self.main_items = [
+            "Show Seconds",
+            "Show Date",
+            "Select Font",
+            "Analogue Clock"
+        ]
         self.font_items = ["Sans", "Dots", "Digital"]
 
         self.current_menu = "clock_main"   # or 'fonts'
@@ -239,6 +245,7 @@ class ClockMenu(BaseManager):
          - Show Seconds
          - Show Date
          - Select Font
+         - Analogue Clock
         """
         if item == "Show Seconds":
             current_val = self.mode_manager.config.get("show_seconds", False)
@@ -246,10 +253,7 @@ class ClockMenu(BaseManager):
             self.mode_manager.config["show_seconds"] = new_val
             self.logger.info(f"ClockMenu: show_seconds toggled to {new_val}")
 
-            # **IMPORTANT**: Save the preference so it's remembered
             self.mode_manager.save_preferences()
-
-            # Return to normal clock
             self.mode_manager.to_clock()
 
         elif item == "Show Date":
@@ -258,10 +262,7 @@ class ClockMenu(BaseManager):
             self.mode_manager.config["show_date"] = new_val
             self.logger.info(f"ClockMenu: show_date toggled to {new_val}")
 
-            # Save
             self.mode_manager.save_preferences()
-
-            # Return to normal clock
             self.mode_manager.to_clock()
 
         elif item == "Select Font":
@@ -274,6 +275,20 @@ class ClockMenu(BaseManager):
             self.current_selection_index = 0
             self.window_start_index = 0
             self.display_current_menu()
+
+        elif item == "Analogue Clock":
+            # Toggle the user config for analogue vs. digital
+            current_val = self.mode_manager.config.get("use_analog_clock", False)
+            new_val = not current_val
+            self.mode_manager.config["use_analog_clock"] = new_val
+            self.logger.info(f"ClockMenu: use_analog_clock toggled to {new_val}")
+
+            # Save and return to normal clock
+            self.mode_manager.save_preferences()
+            self.mode_manager.to_clock()
+
+        else:
+            self.logger.warning(f"ClockMenu: Unknown clock_main item '{item}'")
 
     def handle_font_selection(self, item):
         """
@@ -294,7 +309,7 @@ class ClockMenu(BaseManager):
         # Save the updated config to JSON so it's persisted
         self.mode_manager.save_preferences()
 
-        # Return to normal clock after selecting a font
+        # Return to normal clock
         self.mode_manager.to_clock()
 
     def navigate_back(self):
