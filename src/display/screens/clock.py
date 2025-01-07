@@ -4,27 +4,35 @@ from PIL import Image, ImageDraw
 
 class Clock:
     def __init__(self, display_manager, config):
+        """
+        :param display_manager:  Your DisplayManager controlling the OLED.
+        :param config:           Dictionary with user toggles like:
+                                  - 'clock_font_key' (e.g. 'clock_sans', 'clock_dots', 'clock_digital')
+                                  - 'show_seconds'   (bool)
+                                  - 'show_date'      (bool)
+                                You can also add more toggles if needed.
+        """
         self.display_manager = display_manager
-        self.config = config  # includes user toggles like "clock_font_key", "show_seconds", "show_date", etc.
+        self.config = config  # includes user toggles like "clock_font_key", "show_seconds", "show_date"
         self.running = False
         self.thread  = None
 
-        # For your large clock fonts:
+        # Y-offset for each clock font, if you want to shift them up/down
         self.font_y_offsets = {
             "clock_sans":    -15,
             "clock_dots":    -10,
             "clock_digital":  0
         }
 
-        # The line spacing between time and date if both are shown
+        # Additional spacing between time and date lines
         self.font_line_spacing = {
-            "clock_sans":    15,  
-            "clock_dots":    10,  
+            "clock_sans":    15,
+            "clock_dots":    10,
             "clock_digital":  8
         }
 
-        # **Map from time font to date font** (e.g. clock_sans => clockdate_sans)
-        # Adjust as needed if you rename your date fonts.
+        # If you have separate date fonts:
+        # e.g. 'clock_sans' => 'clockdate_sans'
         self.date_font_map = {
             "clock_sans":    "clockdate_sans",
             "clock_dots":    "clockdate_dots",
@@ -32,88 +40,80 @@ class Clock:
         }
 
     def draw_clock(self):
-        """Render the time (in large font) and optional date (in smaller font)."""
-
-        # 1) Which main clock font?
+        """
+        Render time (in large font) plus optional date (in smaller font).
+        Centre it on the display, applying any font offsets or line spacing.
+        """
+        # 1) Determine which main clock font to use
         time_font_key = self.config.get("clock_font_key", "clock_digital")
-        #print(f"[DEBUG] draw_clock: using time font={time_font_key}")
-
-        # If that font doesn't exist in self.display_manager.fonts, fallback
         if time_font_key not in self.display_manager.fonts:
             print(f"Warning: '{time_font_key}' not loaded; fallback to 'clock_digital'")
             time_font_key = "clock_digital"
 
-        # 2) Figure out date font based on time font
-        #    If no direct mapping, fallback to "clockdate_digital"
+        # 2) Map the clock font to a date font
         date_font_key = self.date_font_map.get(time_font_key, "clockdate_digital")
 
-        # 3) Possibly show seconds
+        # 3) Check toggles for seconds and date
         show_seconds = self.config.get("show_seconds", False)
         time_str = time.strftime("%H:%M:%S") if show_seconds else time.strftime("%H:%M")
 
-        # 4) Possibly show date
         show_date = self.config.get("show_date", False)
         date_str = time.strftime("%d %b %Y") if show_date else None
 
-        # 5) Offsets & spacing for the time font
+        # 4) Retrieve y-offset and line spacing for this clock font
         y_offset = self.font_y_offsets.get(time_font_key, 0)
-        line_gap = self.font_line_spacing.get(time_font_key, 10) 
+        line_gap = self.font_line_spacing.get(time_font_key, 10)
 
-        # 6) Create a blank image for measuring
+        # 5) Make a blank image for the entire display
         w = self.display_manager.oled.width
         h = self.display_manager.oled.height
         img = Image.new("RGB", (w, h), "black")
         draw = ImageDraw.Draw(img)
 
-        # 7) Load the actual PIL fonts
-        #    - e.g. 'clock_sans' might be size=40, 'clockdate_sans' might be size=20
+        # 6) Load the actual PIL fonts for time & date
         time_font = self.display_manager.fonts[time_font_key]
-        date_font = self.display_manager.fonts.get(date_font_key, time_font)  
-        # fallback if date_font_key not loaded
+        date_font = self.display_manager.fonts.get(date_font_key, time_font)
 
-        # We'll measure 1 or 2 lines, each with a possibly different font
-        # - line 1 => (time_str, time_font)
-        # - line 2 => (date_str, date_font) if date is enabled
+        # 7) Build a list of lines to draw (time, then optional date)
         lines = []
         if time_str:
             lines.append((time_str, time_font))
         if date_str:
             lines.append((date_str, date_font))
 
-        # 8) Measure each line
+        # 8) Measure total height
         total_height = 0
         line_dims = []
         for (text, font) in lines:
-            # measure bounding box
-            box = draw.textbbox((0,0), text, font=font)
+            box = draw.textbbox((0, 0), text, font=font)  # textbbox => (left, top, right, bottom)
             lw  = box[2] - box[0]
             lh  = box[3] - box[1]
-            total_height += lh
             line_dims.append((lw, lh, font))
+            total_height += lh
 
-        # If 2 lines, add your line_gap
+        # Add extra spacing if we have 2 lines
         if len(lines) == 2:
             total_height += line_gap
 
-        # 9) Compute the vertical start => centered plus any offset
+        # 9) Compute a start_y to centre everything plus offset
         start_y = (h - total_height) // 2 + y_offset
         y_cursor = start_y
 
-        # 10) Render each line with its own font & size
+        # 10) Draw each line
         for i, (text, font) in enumerate(lines):
             lw, lh, the_font = line_dims[i]
             x_pos = (w - lw) // 2
             draw.text((x_pos, y_cursor), text, font=the_font, fill="white")
-
             y_cursor += lh
             if i < len(lines) - 1:
-                # only add line_gap if there’s another line coming
                 y_cursor += line_gap
 
+        # 11) Convert and display
         final_img = img.convert(self.display_manager.oled.mode)
         self.display_manager.oled.display(final_img)
 
     def start(self):
+        """Begin updating the clock on a 1-second interval in a background thread."""
         if not self.running:
             self.running = True
             self.thread = threading.Thread(target=self.update_clock, daemon=True)
@@ -121,6 +121,7 @@ class Clock:
             print("Clock: Started.")
 
     def stop(self):
+        """Stop updating the clock and clear the display."""
         if self.running:
             self.running = False
             self.thread.join()
@@ -128,6 +129,7 @@ class Clock:
             print("Clock: Stopped.")
 
     def update_clock(self):
+        """Loop that redraws the clock every second while running."""
         while self.running:
             self.draw_clock()
             time.sleep(1)

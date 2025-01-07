@@ -94,6 +94,7 @@ display:
     - "/home/matt/Quoode/src/assets/images/volume.png"
     - "/home/matt/Quoode/src/assets/images/display.png"
     - "/home/matt/Quoode/src/assets/images/webradio.png"
+    - "/home/matt/Quoode/src/assets/images/contrast.png"
 
 mcp23017_address: 0x20
 

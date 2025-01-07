@@ -3,6 +3,7 @@
 import logging
 from .menus.clock_menu import ClockMenu
 from .menus.screensaver_menu import ScreensaverMenu
+from .menus.display_menu import DisplayMenu
 from display.screens.analog_clock import AnalogClock
 from display.screens.modern_screen import ModernScreen
 from display.screens.original_screen import OriginalScreen
@@ -24,6 +25,7 @@ class ManagerFactory:
         self.menu_manager = None
         self.clock_menu = None
         self.screensaver_menu = None
+        self.display_menu = None
         self.screensaver = None
         self.analog_clock = None
 
@@ -36,7 +38,7 @@ class ManagerFactory:
         self.modern_screen     = self.create_modern_screen()
         self.menu_manager      = self.create_menu_manager()
         self.clock_menu        = self.create_clock_menu()
-        self.analog_clock      = self.create_analog_clock()      # <--- NEW
+        self.display_menu        = self.create_display_menu()
         self.screensaver_menu  = self.create_screensaver_menu()
         self.screensaver       = self.create_screensaver()
 
@@ -45,7 +47,7 @@ class ManagerFactory:
         self.mode_manager.set_modern_screen(self.modern_screen)
         self.mode_manager.set_menu_manager(self.menu_manager)
         self.mode_manager.set_clock_menu(self.clock_menu)
-        self.mode_manager.set_analog_clock(self.analog_clock)    # <--- NEW
+        self.mode_manager.set_display_menu(self.display_menu)
         self.mode_manager.set_screensaver_menu(self.screensaver_menu)
         self.mode_manager.set_screensaver(self.screensaver)
 
@@ -69,6 +71,20 @@ class ManagerFactory:
         self.logger.debug("Creating ClockMenu instance.")
         from .menus.clock_menu import ClockMenu
         return ClockMenu(
+            display_manager=self.display_manager,
+            mode_manager=self.mode_manager,
+            window_size=4,
+            y_offset=2,
+            line_spacing=15
+        )
+    
+    def create_display_menu(self):
+        """
+        Create and return a DisplayMenu instance (for display settings).
+        """
+        self.logger.debug("Creating DisplayMenu instance.")
+        from .menus.display_menu import DisplayMenu
+        return DisplayMenu(
             display_manager=self.display_manager,
             mode_manager=self.mode_manager,
             window_size=4,
@@ -110,17 +126,6 @@ class ManagerFactory:
             self.display_manager,
             self.moode_listener,
             self.mode_manager
-        )
-
-    def create_analog_clock(self):
-        """
-        Create and return an AnalogClock instance, if you want to
-        have an analogue option.
-        """
-        self.logger.debug("Creating AnalogClock instance.")
-        return AnalogClock(
-            self.display_manager,
-            update_interval=1.0
         )
 
     def create_screensaver(self):

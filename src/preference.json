@@ -1,8 +1,8 @@
 {
   "display_mode": "modern",
   "clock_font_key": "clock_sans",
-  "show_date": false,
   "show_seconds": false,
+  "show_date": false,
   "screensaver_enabled": true,
   "screensaver_type": "snake",
   "screensaver_timeout": 360

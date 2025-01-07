@@ -59,7 +59,7 @@ class DisplayManager:
         self.default_icon = self.load_default_icon()
 
         # Example: define known services to load icons for:
-        services = ["clock", "webradio", "data", "mpd", "nas", "usb", "display", "volume", "screensaver"]
+        services = ["clock", "webradio", "data", "mpd", "nas", "usb", "display", "volume", "screensaver", "contrast"]
 
         for service in services:
             icon_path = os.path.join(self.icon_dir, f"{service}.png")

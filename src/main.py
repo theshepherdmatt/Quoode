@@ -24,6 +24,7 @@ from display.screensavers.bouncing_text_screensaver import BouncingTextScreensav
 from managers.mode_manager import ModeManager
 from managers.menu_manager import MenuManager
 from managers.menus.clock_menu import ClockMenu
+from managers.menus.display_menu import DisplayMenu
 from managers.menus.screensaver_menu import ScreensaverMenu
 from controls.rotary_control import RotaryControl
 
@@ -31,7 +32,6 @@ from controls.rotary_control import RotaryControl
 from network.moode_listener import MoodeListener
 
 # Optional additional hardware / managers
-# from hardware.buttonsleds import ButtonsLEDController
 from handlers.state_handler import StateHandler
 from managers.manager_factory import ManagerFactory
 
@@ -234,6 +234,7 @@ def main():
     modern_screen   = manager_factory.modern_screen
     screensaver   = manager_factory.screensaver
     menu_manager    = manager_factory.menu_manager
+    display_menu      = manager_factory.display_menu
     clock_menu      = manager_factory.clock_menu
     analog_clock  = manager_factory.analog_clock
     screensaver_menu = manager_factory.screensaver_menu
@@ -257,13 +258,14 @@ def main():
 
         current_mode = mode_manager.get_mode()
 
-        # If we're in screensaver mode, exit immediately on any rotation
+        # If we're in screensaver mode, exit on any rotation
         if current_mode == 'screensaver':
             mode_manager.exit_screensaver()
             return
 
-        # Volume control if we're in a playback-related screen
-        if current_mode in ['original', 'modern', 'playback']:
+        # For volume adjustments if we're in a playback-like screen
+        # Now includes 'modern' and 'classic' as well.
+        if current_mode in ['original', 'modern', 'classic', 'playback']:
             # Debounced volume adjustments
             if now - last_volume_update > volume_update_cooldown:
                 if direction > 0:
@@ -284,7 +286,11 @@ def main():
         elif current_mode == 'clockmenu':
             clock_menu.scroll_selection(direction)
 
-        # Optionally handle a screensavermenu state (if you created one):
+        # If in displaymenu mode, scroll clock menu
+        elif current_mode == 'displaymenu':
+            display_menu.scroll_selection(direction)
+
+        # If in screensavermenu mode
         elif current_mode == 'screensavermenu':
             screensaver_menu.scroll_selection(direction)
 
@@ -314,7 +320,12 @@ def main():
             # Pressing button in clock menu => confirm selection
             clock_menu.select_item()
 
-        elif current_mode in ['original', 'modern', 'playback']:
+        elif current_mode == 'displaymenu':
+            # Pressing button in display menu => confirm selection
+            display_menu.select_item()
+
+        # For 'modern' or 'classic' screens, we do the same as 'original' or 'playback':
+        elif current_mode in ['original', 'modern', 'classic', 'playback']:
             # Toggle play/pause via MPC
             subprocess.run(["mpc", "toggle"], check=False)
             logger.info("Toggled play/pause in playback screen via `mpc toggle`.")
@@ -324,7 +335,6 @@ def main():
             mode_manager.exit_screensaver()
 
         elif current_mode == 'screensavermenu':
-            # If you have a separate screensavermenu state
             screensaver_menu.select_item()
 
         else:

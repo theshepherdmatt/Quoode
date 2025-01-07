@@ -29,18 +29,15 @@ class MenuManager:
         self.menu_stack = []
         self.current_menu_items = ["Clock", "Screensaver", "Display", "System Data"]
 
-        # Sub-menu for Display
-        self.display_menu_items = ["Modern", "Classic"]
-
-        # Sub-menu for System Data
-        self.system_data_items = ["CPU Temp", "IP Address"]
-
         # Icons dictionary — fill in keys for every item you have icons for
         self.icons = {
             "Clock":       self.display_manager.icons.get("clock"),
             "Screensaver": self.display_manager.icons.get("screensaver"),
             "Display":     self.display_manager.icons.get("display"),
             "System Data": self.display_manager.icons.get("data"),
+
+            "Modern":      self.display_manager.icons.get("display"),
+            "Original":     self.display_manager.icons.get("display"),
 
             "Contrast":    self.display_manager.icons.get("contrast"),
             "Fonts":       self.display_manager.icons.get("fonts"),
@@ -258,30 +255,12 @@ class MenuManager:
             self.mode_manager.to_screensavermenu()
 
         elif selected_item == "Display":
-            # Sub-menu for things like Contrast, Fonts
-            self.menu_stack.append(list(self.current_menu_items))
-            self.current_menu_items = self.display_menu_items
-            self.current_selection_index = 0
-            self.window_start_index = 0
-            self.display_menu()
+            self.mode_manager.to_displaymenu()
 
-        elif selected_item == "System Data":
-            # Sub-menu for CPU Temp, IP
-            self.menu_stack.append(list(self.current_menu_items))
-            self.current_menu_items = self.system_data_items
-            self.current_selection_index = 0
-            self.window_start_index = 0
-            self.display_menu()
 
         # Sub-menu items
         elif selected_item == "Contrast":
             self.logger.info("TODO: Adjust display contrast here, e.g. self.display_manager.set_contrast(...).")
-
-        elif selected_item == "Fonts":
-            self.logger.info("TODO: Manage global font styles from here if desired.")
-
-        elif selected_item == "CPU Temp":
-            self.logger.info("TODO: Show CPU temperature, or run a command to read CPU info.")
 
         elif selected_item == "IP Address":
             self.logger.info("TODO: Display IP info, e.g. run `hostname -I` or similar.")
