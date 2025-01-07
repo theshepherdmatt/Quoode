@@ -352,6 +352,9 @@ def main():
         if current_mode == 'clock':
             mode_manager.to_menu()
             logger.info("Long press in clock => switched to menu.")
+
+        elif current_mode == 'menu':
+            mode_manager.to_clock()
         else:
             logger.info(f"Long press in '{current_mode}' mode => no special action or go to clock.")
             # If you like, you could do:

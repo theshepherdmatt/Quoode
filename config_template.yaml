@@ -92,6 +92,8 @@ display:
     - "/home/{USER}/Quoode/src/assets/images/nas.png"
     - "/home/{USER}/Quoode/src/assets/images/data.png"
     - "/home/{USER}/Quoode/src/assets/images/volume.png"
+    - "/home/{USER}/Quoode/src/assets/images/shuffle.png"
+    - "/home/{USER}/Quoode/src/assets/images/repeat.png"
     - "/home/{USER}/Quoode/src/assets/images/display.png"
     - "/home/{USER}/Quoode/src/assets/images/contrast.png"
     - "/home/{USER}/Quoode/src/assets/images/webradio.png"
