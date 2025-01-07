@@ -12,14 +12,14 @@ class Clock:
         # For your large clock fonts:
         self.font_y_offsets = {
             "clock_sans":    -15,
-            "clock_dots":    -2,
+            "clock_dots":    -10,
             "clock_digital":  0
         }
 
         # The line spacing between time and date if both are shown
         self.font_line_spacing = {
             "clock_sans":    15,  
-            "clock_dots":    6,  
+            "clock_dots":    10,  
             "clock_digital":  8
         }
 

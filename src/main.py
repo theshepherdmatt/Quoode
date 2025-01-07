@@ -14,8 +14,9 @@ from PIL import Image, ImageSequence
 from display.display_manager import DisplayManager
 from correct_time import wait_for_correct_time
 from display.screens.clock import Clock
-from display.screens.analog_clock import AnalogClock
+from hardware.buttonsleds import ButtonsLEDController
 from display.screens.original_screen import OriginalScreen
+from display.screens.modern_screen import ModernScreen
 from display.screens.modern_screen import ModernScreen
 from display.screensavers.snake_screensaver import SnakeScreensaver
 from display.screensavers.starfield_screensaver import StarfieldScreensaver
@@ -238,8 +239,8 @@ def main():
     screensaver_menu = manager_factory.screensaver_menu
 
     # 17. Optional ButtonsLEDController
-    # buttons_leds = ButtonsLEDController(moode_listener=moode_listener, config_path=config_path)
-    # buttons_leds.start()
+    buttons_leds = ButtonsLEDController(config_path=config_path)
+    buttons_leds.start()
 
     last_interaction_time = time.time()
 
@@ -381,6 +382,7 @@ def main():
         # Clean up stuff
         rotary_control.stop()
         moode_listener.stop()
+        buttons_leds.stop()
         clock.stop()
         if screensaver is not None:
             screensaver.stop_screensaver()
