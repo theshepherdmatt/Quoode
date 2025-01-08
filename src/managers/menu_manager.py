@@ -39,11 +39,6 @@ class MenuManager:
             "Modern":      self.display_manager.icons.get("display"),
             "Original":     self.display_manager.icons.get("display"),
 
-            "Contrast":    self.display_manager.icons.get("contrast"),
-            "Fonts":       self.display_manager.icons.get("fonts"),
-
-            "CPU Temp":    self.display_manager.icons.get("cpu"),
-            "IP Address":  self.display_manager.icons.get("ip"),
         }
 
         # Selection and layout
@@ -257,16 +252,9 @@ class MenuManager:
         elif selected_item == "Display":
             self.mode_manager.to_displaymenu()
 
+        elif selected_item == "System Data":
+            self.mode_manager.to_systeminfo()
 
-        # Sub-menu items
-        elif selected_item == "Contrast":
-            self.logger.info("TODO: Adjust display contrast here, e.g. self.display_manager.set_contrast(...).")
-
-        elif selected_item == "IP Address":
-            self.logger.info("TODO: Display IP info, e.g. run `hostname -I` or similar.")
-
-        # Potentially, you could auto-return to main menu or clock
-        # self.mode_manager.to_clock()
 
     # Optional method to navigate back if you want a "Back" item in sub-menus
     def navigate_back(self):

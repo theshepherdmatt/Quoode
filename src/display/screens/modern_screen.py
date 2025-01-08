@@ -111,43 +111,35 @@ class ModernScreen(BaseManager):
     def draw_display(self, data):
         """
         Draw the ModernScreen:
-        - For webradio => NO progress bar or seek/duration;
+          - For webradio => NO progress bar or seek/duration;
             also shift the artist/title downward to fill that gap.
-        - For others => normal progress bar (drawn above the bottom row) + standard top positioning for artist/title
-        - Show shuffle & repeat icons around the samplerate/bitdepth text.
+          - For others => normal progress bar (drawn above the bottom row) + standard top positioning for artist/title
         """
         if not data:
             return
 
-        # Create blank canvas
         base_image = Image.new("RGB", self.display_manager.oled.size, "black")
         draw = ImageDraw.Draw(base_image)
 
-        # -------------------------------------------------------
-        # 1) Basic info retrieval
-        # -------------------------------------------------------
-        song_title  = data.get("title", "Unknown Title")
+        # Basic info
+        song_title = data.get("title", "Unknown Title")
         artist_name = data.get("artist", "Unknown Artist")
-        service     = data.get("current_service", "default").lower()
+        service = data.get("current_service", "default").lower()
 
-        # If webradio => interpret data["name"] as station, data["title"] as track
+        # If the user is on webradio => interpret data["name"] as the station,
+        # and data["title"] as the current track
         if service == "webradio":
             artist_name = data.get("name", "Unknown Station")
             song_title  = data.get("title", "Unknown Title")
 
-        status       = data.get("status", {})
-        audio_info   = status.get("audio", "N/A")
-        samplerate   = audio_info.split(":")[0] if ":" in audio_info else "N/A"
-        bitdepth     = audio_info.split(":")[1] if ":" in audio_info else "N/A"
-        volume       = int(data.get("volume", 50))
+        status = data.get("status", {})
+        audio_info = status.get("audio", "N/A")
+        samplerate = audio_info.split(":")[0] if ":" in audio_info else "N/A"
+        bitdepth   = audio_info.split(":")[1] if ":" in audio_info else "N/A"
+        volume     = int(data.get("volume", 50))
 
-        # Shuffle & Repeat flags: '1' => on, '0' => off
-        shuffle_flag = status.get("random", '0') 
-        repeat_flag  = status.get("repeat", '0')
 
-        # -------------------------------------------------------
-        # 2) Convert samplerate/bitdepth => "48.0kHz / 24bit"
-        # -------------------------------------------------------
+        # Convert samplerate/bitdepth
         samplerate_khz = "N/A"
         bitdepth_bit   = "N/A"
         try:
@@ -157,10 +149,8 @@ class ModernScreen(BaseManager):
                 bitdepth_bit = f"{int(bitdepth)}bit"
         except ValueError:
             pass
-
         info_text = f"{samplerate_khz} / {bitdepth_bit}"
 
-        # Layout / geometry
         screen_width  = self.display_manager.oled.width
         screen_height = self.display_manager.oled.height
         margin        = 5
@@ -168,15 +158,15 @@ class ModernScreen(BaseManager):
 
         # Decide if we shift artist/title down for webradio
         if service == "webradio":
+            # SHIFT them down 15-20px from normal
             artist_y = margin + 1
             title_y  = artist_y + 14
         else:
+            # Normal positions
             artist_y = margin - 6
             title_y  = margin + 10 - 2
 
-        # -------------------------------------------------------
-        # 3) Artist scrolling
-        # -------------------------------------------------------
+        # --- Artist scrolling ---
         artist_display, self.scroll_offset_artist, artist_scrolling = self.update_scroll(
             artist_name, self.font_artist, max_text_width, self.scroll_offset_artist
         )
@@ -184,14 +174,12 @@ class ModernScreen(BaseManager):
             artist_x = (screen_width // 2) - self.scroll_offset_artist
         else:
             bbox = self.font_artist.getbbox(artist_display)
-            text_w = (bbox[2] - bbox[0]) if bbox else 0
-            artist_x = (screen_width - text_w) // 2
+            text_width = (bbox[2] - bbox[0]) if bbox else 0
+            artist_x   = (screen_width - text_width) // 2
 
         draw.text((artist_x, artist_y), artist_display, font=self.font_artist, fill="white")
 
-        # -------------------------------------------------------
-        # 4) Title scrolling
-        # -------------------------------------------------------
+        # --- Title scrolling ---
         title_display, self.scroll_offset_title, title_scrolling = self.update_scroll(
             song_title, self.font_title, max_text_width, self.scroll_offset_title
         )
@@ -199,8 +187,8 @@ class ModernScreen(BaseManager):
             title_x = (screen_width // 2) - self.scroll_offset_title
         else:
             bbox = self.font_title.getbbox(title_display)
-            text_w = (bbox[2] - bbox[0]) if bbox else 0
-            title_x = (screen_width - text_w) // 2
+            text_width = (bbox[2] - bbox[0]) if bbox else 0
+            title_x    = (screen_width - text_width) // 2
 
         draw.text((title_x, title_y), title_display, font=self.font_title, fill="white")
 
@@ -208,24 +196,22 @@ class ModernScreen(BaseManager):
         if service != "webradio":
             self.draw_progress_bar(draw, data, base_image)
 
-        # -------------------------------------------------------
-        # 5) Bottom row
-        #    Volume icon + text (left), samplerate/bitdepth (center), service icon (right)
-        # -------------------------------------------------------
+        # Bottom row: volume icon & text (left), samplerate/bitdepth (center), service icon (right)
+        # Volume icon
         volume_icon = self.display_manager.icons.get("volume", self.display_manager.default_icon)
-        if volume_icon:
-            volume_icon = volume_icon.resize((10, 10))
+        volume_icon = volume_icon.resize((10, 10))
+
         icon_x = margin
         icon_y = screen_height - (margin + 12)
         base_image.paste(volume_icon, (icon_x, icon_y))
 
+        # Volume text
         vol_text = str(volume)
         text_x   = icon_x + 12
         text_y   = icon_y - 2
         draw.text((text_x, text_y), vol_text, font=self.font_info, fill="white")
 
         # Samplerate/bitdepth in bottom center
-        info_x = info_y = 0
         try:
             if hasattr(self.font_info, "getlength"):
                 info_width = self.font_info.getlength(info_text)
@@ -242,80 +228,20 @@ class ModernScreen(BaseManager):
 
         # Service icon on bottom-right
         service_icon = self.display_manager.icons.get(service, self.display_manager.default_icon)
-        if service_icon:
-            if service_icon.size != (22, 22):
-                service_icon = service_icon.resize((22, 22))
-            # Flatten alpha if needed
-            if service_icon.mode == "RGBA":
-                bg = Image.new("RGB", service_icon.size, (0, 0, 0))
-                bg.paste(service_icon, mask=service_icon.split()[3])
-                service_icon = bg
+        if service_icon.size != (22, 22):
+            service_icon = service_icon.resize((22, 22))
+        # If it has alpha
+        if service_icon.mode == "RGBA":
+            bg = Image.new("RGB", service_icon.size, (0, 0, 0))
+            bg.paste(service_icon, mask=service_icon.split()[3])
+            service_icon = bg
 
-            s_icon_x = screen_width - margin - 22
-            s_icon_y = (screen_height - margin - 22) + 5
-            base_image.paste(service_icon, (s_icon_x, s_icon_y))
+        s_icon_x = screen_width - margin - 22
+        s_icon_y = (screen_height - margin - 22) + 5
+        base_image.paste(service_icon, (s_icon_x, s_icon_y))
 
-        # -------------------------------------------------------
-        # 6) Shuffle & Repeat icons
-        # -------------------------------------------------------
-        shuffle_icon = self.display_manager.icons.get("shuffle")
-        repeat_icon  = self.display_manager.icons.get("repeat")
-
-        if shuffle_icon and repeat_icon:
-            # Resize if you want them smaller/bigger
-            shuffle_icon = shuffle_icon.resize((14, 14), Image.LANCZOS)
-            repeat_icon  = repeat_icon.resize((14, 14), Image.LANCZOS)
-
-            # If shuffle_flag == '1' => icon is bright, else we dim it
-            if shuffle_flag == '1':
-                # Shuffle ON => draw as-is
-                pass
-            else:
-                # Shuffle OFF => optionally dim
-                shuffle_icon = self.dim_icon(shuffle_icon, factor=0.3)
-
-            # If repeat_flag == '1' => icon is bright, else we dim it
-            if repeat_flag == '1':
-                pass
-            else:
-                repeat_icon = self.dim_icon(repeat_icon, factor=0.3)
-
-            # Place them around the info_text
-            # e.g. shuffle to the left, repeat to the right
-            shuffle_x = int(info_x - 28)   # or int(...)
-            shuffle_y = int(info_y + 1)    # or int(...)
-            repeat_x  = int(info_x + info_width + 12)
-            repeat_y  = int(info_y + 1)
-
-            base_image.paste(shuffle_icon, (shuffle_x, shuffle_y))
-            base_image.paste(repeat_icon, (repeat_x, repeat_y))
-        else:
-            self.logger.debug("ModernScreen: Shuffle/Repeat icons not found in display_manager.icons")
-
-        # Finally display the updated image
+        # Finally update screen
         self.display_manager.oled.display(base_image)
-
-
-    def dim_icon(self, icon_image, factor=0.3):
-        """
-        Utility method to darken an icon by a given factor.
-        e.g. factor=0.3 => 30% brightness
-        """
-        # Convert to RGBA to manipulate alpha or brightness
-        icon_rgba = icon_image.convert("RGBA")
-        pixels = icon_rgba.load()
-
-        for y in range(icon_rgba.height):
-            for x in range(icon_rgba.width):
-                r, g, b, a = pixels[x, y]
-                # scale each color channel
-                nr = int(r * factor)
-                ng = int(g * factor)
-                nb = int(b * factor)
-                pixels[x, y] = (nr, ng, nb, a)
-
-        return icon_rgba
-
 
     def draw_progress_bar(self, draw, data, base_image):
         """
@@ -397,7 +323,7 @@ class ModernScreen(BaseManager):
         self.update_event.set()
 
     def start_mode(self):
-        """Activate ModernScreen mode."""
+        """Activate the ModernScreen mode."""
         if self.mode_manager.get_mode() != "modern":
             self.logger.warning("ModernScreen: Not on 'modern' mode to start.")
             return
@@ -405,18 +331,11 @@ class ModernScreen(BaseManager):
         self.is_active = True
         self.reset_scrolling()
 
-        # Start/refresh the update threads
         if not self.update_thread.is_alive():
             self.stop_event.clear()
             self.update_thread = threading.Thread(target=self.update_display_loop, daemon=True)
             self.update_thread.start()
-            self.logger.debug("ModernScreen: Update display thread started.")
-
-        # **Start the periodic poll thread** if you want frequent MPD checks
-        self.poll_stop_event = threading.Event()
-        self.poll_thread = threading.Thread(target=self.periodic_update, daemon=True)
-        self.poll_thread.start()
-        self.logger.debug("ModernScreen: Periodic poll thread started.")
+            self.logger.debug("ModernScreen: Update thread restarted.")
 
     def stop_mode(self):
         """Deactivate ModernScreen mode."""
@@ -427,21 +346,12 @@ class ModernScreen(BaseManager):
         self.is_active = False
         self.stop_event.set()
 
-        # **Stop the poll thread** if running
-        if hasattr(self, 'poll_stop_event'):
-            self.poll_stop_event.set()
-
         if self.update_thread.is_alive():
             self.update_thread.join(timeout=1)
-            self.logger.debug("ModernScreen: Update display thread stopped.")
-
-        if hasattr(self, 'poll_thread') and self.poll_thread.is_alive():
-            self.poll_thread.join(timeout=1)
-            self.logger.debug("ModernScreen: Periodic poll thread stopped.")
+            self.logger.debug("ModernScreen: Update thread stopped.")
 
         self.display_manager.clear_screen()
         self.logger.info("ModernScreen: ModernScreen mode stopped and screen cleared.")
-
 
     def display_playback_info(self):
         """If needed, manually display the current state once."""
@@ -500,15 +410,3 @@ class ModernScreen(BaseManager):
             final_img = image.convert(self.display_manager.oled.mode)
             self.display_manager.oled.display(final_img)
             self.logger.info(f"Displayed error: {title} => {message}")
-
-
-    def periodic_update(self):
-        while self.is_active:
-            # Poll MPD status frequently (e.g. every 1 second)
-            current_state = self.moode_listener.get_current_state()
-            with self.state_lock:
-                self.latest_state = current_state
-            self.update_event.set()
-
-            time.sleep(1)
-

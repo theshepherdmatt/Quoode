@@ -7,6 +7,7 @@ from .menus.display_menu import DisplayMenu
 from display.screens.analog_clock import AnalogClock
 from display.screens.modern_screen import ModernScreen
 from display.screens.original_screen import OriginalScreen
+from display.screens.system_info_screen import SystemInfoScreen
 
 class ManagerFactory:
     def __init__(self, display_manager, moode_listener, mode_manager, config):
@@ -27,7 +28,7 @@ class ManagerFactory:
         self.screensaver_menu = None
         self.display_menu = None
         self.screensaver = None
-        self.analog_clock = None
+        self.system_info_screen = None
 
     def setup_mode_manager(self):
         """
@@ -36,6 +37,7 @@ class ManagerFactory:
         """
         self.original_screen   = self.create_original_screen()
         self.modern_screen     = self.create_modern_screen()
+        self.system_info_screen  = self.create_system_info_screen()
         self.menu_manager      = self.create_menu_manager()
         self.clock_menu        = self.create_clock_menu()
         self.display_menu        = self.create_display_menu()
@@ -45,6 +47,7 @@ class ManagerFactory:
         # Assign them to the ModeManager
         self.mode_manager.set_original_screen(self.original_screen)
         self.mode_manager.set_modern_screen(self.modern_screen)
+        self.mode_manager.set_system_info_screen(self.system_info_screen)
         self.mode_manager.set_menu_manager(self.menu_manager)
         self.mode_manager.set_clock_menu(self.clock_menu)
         self.mode_manager.set_display_menu(self.display_menu)
@@ -123,6 +126,17 @@ class ManagerFactory:
         """
         self.logger.debug("Creating OriginalScreen instance.")
         return OriginalScreen(
+            self.display_manager,
+            self.moode_listener,
+            self.mode_manager
+        )
+    
+    def create_system_info_screen(self):
+        """
+        Create and return an SystemInfoScreen instance.
+        """
+        self.logger.debug("Creating SystemInfoScreen instance.")
+        return SystemInfoScreen(
             self.display_manager,
             self.moode_listener,
             self.mode_manager

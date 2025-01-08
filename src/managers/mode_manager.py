@@ -19,11 +19,12 @@ class ModeManager:
         {'name': 'playback',     'on_enter': 'enter_playback'},
         {'name': 'menu',         'on_enter': 'enter_menu'},
         {'name': 'clockmenu',    'on_enter': 'enter_clockmenu'},
-        {'name': 'displaymenu',  'on_enter': 'enter_displaymenu'},  # <--- important
+        {'name': 'displaymenu',  'on_enter': 'enter_displaymenu'}, 
         {'name': 'original',     'on_enter': 'enter_original'},
         {'name': 'modern',       'on_enter': 'enter_modern'},
         {'name': 'screensaver',  'on_enter': 'enter_screensaver'},
-        {'name': 'screensavermenu', 'on_enter': 'enter_screensavermenu'}
+        {'name': 'screensavermenu', 'on_enter': 'enter_screensavermenu'},
+        {'name': 'systeminfo',   'on_enter':     'enter_systeminfo'}
     ]
 
     def __init__(
@@ -55,6 +56,7 @@ class ModeManager:
         # References to other managers/screens
         self.original_screen = None
         self.modern_screen = None
+        self.system_info_screen = None
         self.menu_manager = None
         self.clock_menu = None
         self.display_menu = None  # <--- important
@@ -80,6 +82,7 @@ class ModeManager:
         self.machine.add_transition('to_modern',        source='*', dest='modern')
         self.machine.add_transition('to_screensaver',   source='*', dest='screensaver')
         self.machine.add_transition('to_screensavermenu', source='*', dest='screensavermenu')
+        self.machine.add_transition('to_systeminfo',     source='*',   dest='systeminfo')
 
         # Lock for thread safety
         self.suppress_state_changes = False
@@ -184,6 +187,9 @@ class ModeManager:
     def set_modern_screen(self, modern_screen):
         self.modern_screen = modern_screen
 
+    def set_system_info_screen(self, system_info_screen):
+        self.system_info_screen = system_info_screen        
+
     def set_menu_manager(self, menu_manager):
         self.menu_manager = menu_manager
 
@@ -199,8 +205,6 @@ class ModeManager:
     def set_screensaver_menu(self, screensaver_menu):
         self.screensaver_menu = screensaver_menu
 
-    def set_analog_clock(self, analog_clock):
-        self.analog_clock = analog_clock
 
     # -----------------------------------------------------------------
     #  Helper
@@ -222,6 +226,8 @@ class ModeManager:
             self.display_menu.stop_mode()
         if self.screensaver_menu and self.screensaver_menu.is_active:
             self.screensaver_menu.stop_mode()
+        if self.system_info_screen and self.system_info_screen.is_active:
+            self.system_info_screen.stop_mode()
         if self.modern_screen and self.modern_screen.is_active:
             self.modern_screen.stop_mode()
         if self.original_screen and self.original_screen.is_active:
@@ -264,6 +270,8 @@ class ModeManager:
             self.original_screen.stop_mode()
         if self.modern_screen and self.modern_screen.is_active:
             self.modern_screen.stop_mode()
+        if self.system_info_screen and self.system_info_screen.is_active:
+            self.system_info_screen.stop_mode()
         if self.clock_menu and self.clock_menu.is_active:
             self.clock_menu.stop_mode()
         if self.display_menu and self.display_menu.is_active:
@@ -289,6 +297,8 @@ class ModeManager:
             self.menu_manager.stop_mode()
         if self.modern_screen and self.modern_screen.is_active:
             self.modern_screen.stop_mode()
+        if self.system_info_screen and self.system_info_screen.is_active:
+            self.system_info_screen.stop_mode()
         if self.original_screen and self.original_screen.is_active:
             self.original_screen.stop_mode()
         if self.display_menu and self.display_menu.is_active:
@@ -324,6 +334,8 @@ class ModeManager:
             self.screensaver_menu.stop_mode()
         if self.modern_screen and self.modern_screen.is_active:
             self.modern_screen.stop_mode()
+        if self.system_info_screen and self.system_info_screen.is_active:
+            self.system_info_screen.stop_mode()
         if self.original_screen and self.original_screen.is_active:
             self.original_screen.stop_mode()
 
@@ -352,6 +364,8 @@ class ModeManager:
             self.original_screen.stop_mode()
         if self.modern_screen and self.modern_screen.is_active:
             self.modern_screen.stop_mode()
+        if self.system_info_screen and self.system_info_screen.is_active:
+            self.system_info_screen.stop_mode()
 
         if self.screensaver:
             self.screensaver.stop_screensaver()
@@ -403,6 +417,31 @@ class ModeManager:
         else:
             self.logger.error("ModeManager: modern_screen is not set.")
 
+    def enter_systeminfo(self, event):
+        self.logger.info("ModeManager: Entering System Info mode.")
+        if self.clock:
+            self.clock.stop()
+        if self.menu_manager and self.menu_manager.is_active:
+            self.menu_manager.stop_mode()
+        if self.clock_menu and self.clock_menu.is_active:
+            self.clock_menu.stop_mode()
+        if self.display_menu and self.display_menu.is_active:
+            self.display_menu.stop_mode()
+        if self.original_screen and self.original_screen.is_active:
+            self.original_screen.stop_mode()
+        if self.modern_screen and self.modern_screen.is_active:
+            self.modern_screen.stop_mode()
+        if self.screensaver_menu and self.screensaver_menu.is_active:
+            self.screensaver_menu.stop_mode()
+
+        if self.screensaver:
+            self.screensaver.stop_screensaver()
+
+        if self.system_info_screen:
+            self.system_info_screen.start_mode()
+        else:
+            self.logger.error("ModeManager: system_info_screen is not set.")
+
     def enter_screensaver(self, event):
         self.logger.info("ModeManager: Entering screensaver mode.")
 
@@ -420,6 +459,8 @@ class ModeManager:
             self.original_screen.stop_mode()
         if self.modern_screen and self.modern_screen.is_active:
             self.modern_screen.stop_mode()
+        if self.system_info_screen and self.system_info_screen.is_active:
+            self.system_info_screen.stop_mode()
 
         # Re-create a screensaver instance
         screensaver_type = self.config.get("screensaver_type", "generic").lower()

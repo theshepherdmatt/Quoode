@@ -17,7 +17,7 @@ from display.screens.clock import Clock
 from hardware.buttonsleds import ButtonsLEDController
 from display.screens.original_screen import OriginalScreen
 from display.screens.modern_screen import ModernScreen
-from display.screens.modern_screen import ModernScreen
+from display.screens.system_info_screen import SystemInfoScreen
 from display.screensavers.snake_screensaver import SnakeScreensaver
 from display.screensavers.starfield_screensaver import StarfieldScreensaver
 from display.screensavers.bouncing_text_screensaver import BouncingTextScreensaver
@@ -236,7 +236,7 @@ def main():
     menu_manager    = manager_factory.menu_manager
     display_menu      = manager_factory.display_menu
     clock_menu      = manager_factory.clock_menu
-    analog_clock  = manager_factory.analog_clock
+    system_info_screen   = manager_factory.system_info_screen
     screensaver_menu = manager_factory.screensaver_menu
 
     # 17. Optional ButtonsLEDController
@@ -265,7 +265,7 @@ def main():
 
         # For volume adjustments if we're in a playback-like screen
         # Now includes 'modern' and 'classic' as well.
-        if current_mode in ['original', 'modern', 'classic', 'playback']:
+        if current_mode in ['original', 'modern', 'systeminfo', 'playback']:
             # Debounced volume adjustments
             if now - last_volume_update > volume_update_cooldown:
                 if direction > 0:
@@ -325,7 +325,7 @@ def main():
             display_menu.select_item()
 
         # For 'modern' or 'classic' screens, we do the same as 'original' or 'playback':
-        elif current_mode in ['original', 'modern', 'classic', 'playback']:
+        elif current_mode in ['original', 'modern', 'systeminfo', 'playback']:
             # Toggle play/pause via MPC
             subprocess.run(["mpc", "toggle"], check=False)
             logger.info("Toggled play/pause in playback screen via `mpc toggle`.")
@@ -354,6 +354,9 @@ def main():
             logger.info("Long press in clock => switched to menu.")
 
         elif current_mode == 'menu':
+            mode_manager.to_clock()
+            
+        elif current_mode == 'systeminfo':
             mode_manager.to_clock()
         else:
             logger.info(f"Long press in '{current_mode}' mode => no special action or go to clock.")
