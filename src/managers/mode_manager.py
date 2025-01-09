@@ -240,6 +240,9 @@ class ModeManager:
         if self.clock:
             self.clock.config = self.config
             self.clock.start()
+
+            self.reset_idle_timer()
+            
         else:
             self.logger.error("ModeManager: No Clock instance to start.")
 
@@ -259,8 +262,11 @@ class ModeManager:
         else:
             if self.original_screen:
                 self.original_screen.start_mode()
+
             else:
                 self.logger.error("ModeManager: original_screen not set.")
+
+            self.reset_idle_timer()
 
     def enter_menu(self, event):
         self.logger.info("ModeManager: Entering menu mode.")
@@ -284,6 +290,9 @@ class ModeManager:
 
         if self.menu_manager:
             self.menu_manager.start_mode()
+
+            self.reset_idle_timer()
+
         else:
             self.logger.error("ModeManager: menu_manager is not set.")
 
@@ -349,6 +358,8 @@ class ModeManager:
         else:
             self.logger.warning("ModeManager: No display_menu object is set.")
 
+        self.reset_idle_timer()
+
     def enter_screensavermenu(self, event):
         self.logger.info("ModeManager: Entering screensavermenu state.")
 
@@ -374,6 +385,8 @@ class ModeManager:
             self.screensaver_menu.start_mode()
         else:
             self.logger.warning("ModeManager: No screensaver_menu object is set.")
+
+        self.reset_idle_timer()
 
     def enter_original(self, event):
         self.logger.info("ModeManager: Entering Original mode.")
@@ -441,6 +454,8 @@ class ModeManager:
             self.system_info_screen.start_mode()
         else:
             self.logger.error("ModeManager: system_info_screen is not set.")
+
+        self.reset_idle_timer()
 
     def enter_screensaver(self, event):
         self.logger.info("ModeManager: Entering screensaver mode.")

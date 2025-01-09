@@ -264,8 +264,7 @@ def main():
             return
 
         # For volume adjustments if we're in a playback-like screen
-        # Now includes 'modern' and 'classic' as well.
-        if current_mode in ['original', 'modern', 'systeminfo', 'playback']:
+        if current_mode in ['original', 'modern', 'playback']:
             # Debounced volume adjustments
             if now - last_volume_update > volume_update_cooldown:
                 if direction > 0:

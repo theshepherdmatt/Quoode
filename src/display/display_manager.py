@@ -1,110 +1,64 @@
 import logging
-from PIL import Image, ImageDraw, ImageFont, ImageSequence, ImageFilter, ImageEnhance
-from luma.core.interface.serial import spi
-from luma.oled.device import ssd1322
+from PIL import Image, ImageDraw, ImageFont, ImageSequence
+import RPi.GPIO as GPIO
 import threading
 import os
 import time
+
+# Luma imports:
+from luma.core.interface.serial import spi
+from luma.oled.device import ssd1322
 
 class DisplayManager:
     def __init__(self, config):
         """
         Initializes and configures the SSD1322 OLED via SPI, then loads fonts and icons.
-
-        :param config: A dictionary (from your YAML) containing:
-            - user_home or install_user: The username or full path if needed
-            - icon_dir: Where to look for icons
-            - fonts: Dict of font definitions, etc.
+        :param config: A dictionary containing user_home, icon_dir, fonts, etc.
         """
-        # 1) Dynamically figure out the user’s directory or fallback
-        #    e.g. from config, or fallback to '/home/matt'.
         self.install_user = config.get('install_user', 'matt')
         self.user_home = config.get('user_home', f"/home/{self.install_user}")
-        
-        # 2) For icons, either read from config or build a path
-        #    e.g. "/home/<user>/Quoode/src/assets/images"
-        self.icon_dir = config.get(
-            'icon_dir',
-            os.path.join(self.user_home, "Quoode/src/assets/images")
-        )
+        self.icon_dir = config.get('icon_dir', os.path.join(self.user_home, "Quoode/src/assets/images"))
 
-        # 3) Set up SPI + SSD1322
-        self.serial = spi(device=0, port=0)  # Adjust if needed
+        # Optionally read the reset pin from config, or default to 25
+        self.reset_gpio_pin = config.get('reset_gpio_pin', 25)
+
+        # SPI + SSD1322 setup
+        self.serial = spi(device=0, port=0)
         self.oled = ssd1322(self.serial, width=256, height=64, rotate=2)
 
         self.config = config
         self.lock = threading.Lock()
 
-        # Set up logging
+        # Logging
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.WARNING)
 
-        # (Optional) console handler
         ch = logging.StreamHandler()
         ch.setLevel(logging.DEBUG)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         ch.setFormatter(formatter)
-
         if not self.logger.handlers:
             self.logger.addHandler(ch)
 
         self.logger.info("DisplayManager initialized.")
 
-        # Prepare fonts & icons
+        # Initialize fonts & icons
         self.fonts = {}
         self._load_fonts()
+
         self.icons = {}
-
-        # Load default icon
         self.default_icon = self.load_default_icon()
+        self._load_icons()
 
-        # Example: define known services to load icons for:
-        services = ["clock", "shuffle", "repeat", "webradio", "data", "mpd", "nas", "usb", "display", "volume", "screensaver", "contrast"]
-
-        for service in services:
-            icon_path = os.path.join(self.icon_dir, f"{service}.png")
-            try:
-                icon = Image.open(icon_path)
-                # If RGBA, flatten on black
-                if icon.mode == "RGBA":
-                    background = Image.new("RGB", icon.size, (0, 0, 0))
-                    background.paste(icon, mask=icon.split()[3])
-                    icon = background
-                    self.logger.info(f"Handled transparency for icon '{service}'.")
-                # Resize + convert
-                icon = icon.resize((35, 35), Image.LANCZOS).convert("RGB")
-                self.icons[service] = icon
-                self.logger.info(f"Loaded icon for '{service}' from '{icon_path}'.")
-            except IOError:
-                self.logger.warning(
-                    f"Icon for '{service}' not found at '{icon_path}', using default icon."
-                )
-                self.icons[service] = self.default_icon
-
-    def load_default_icon(self):
-        """
-        Loads the default icon (falling back if not found).
-        Dynamically references self.icon_dir or similar.
-        """
-        default_icon_path = os.path.join(self.icon_dir, "default.png")
-        try:
-            icon = Image.open(default_icon_path)
-            if icon.mode == "RGBA":
-                background = Image.new("RGB", icon.size, (0, 0, 0))
-                background.paste(icon, mask=icon.split()[3])
-                icon = background
-                self.logger.info("Handled transparency for default icon.")
-            icon = icon.resize((35, 35), Image.LANCZOS).convert("RGB")
-            self.logger.info(f"Loaded default icon from '{default_icon_path}'.")
-            return icon
-        except IOError:
-            self.logger.warning("Default icon not found. Creating grey placeholder.")
-            return Image.new("RGB", (35, 35), "grey")
+        # --- Setup GPIO for reset if you want to control it here ---
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(self.reset_gpio_pin, GPIO.OUT)
+        # Usually set it high so the display is not held in reset:
+        GPIO.output(self.reset_gpio_pin, GPIO.HIGH)
 
     def _load_fonts(self):
         """
-        Loads fonts from config['fonts'].
-        Each entry is a dict with 'path' + 'size'.
+        Loads fonts from config['fonts'] entries: { "font_key": { "path": "...", "size": ... }, ... }
         """
         fonts_config = self.config.get('fonts', {})
         default_font = ImageFont.load_default()
@@ -127,35 +81,77 @@ class DisplayManager:
 
         self.logger.info(f"Available fonts after loading: {list(self.fonts.keys())}")
 
+    def _load_icons(self):
+        """
+        Load a known set of icons from self.icon_dir into self.icons dict.
+        """
+        # Example set of icons you want to load
+        icon_names = ["clock", "shuffle", "repeat", "webradio", "data", "mpd",
+                      "nas", "usb", "display", "volume", "screensaver", "contrast"]
+        for name in icon_names:
+            icon_path = os.path.join(self.icon_dir, f"{name}.png")
+            try:
+                img = Image.open(icon_path)
+                if img.mode == "RGBA":
+                    bg = Image.new("RGB", img.size, (0, 0, 0))
+                    bg.paste(img, mask=img.split()[3])
+                    img = bg
+                img = img.resize((35, 35), Image.LANCZOS).convert("RGB")
+                self.icons[name] = img
+                self.logger.info(f"Loaded icon for '{name}' from '{icon_path}'.")
+            except IOError:
+                self.logger.warning(
+                    f"Icon for '{name}' not found at '{icon_path}', using default icon."
+                )
+                self.icons[name] = self.default_icon
+
+    def load_default_icon(self):
+        default_icon_path = os.path.join(self.icon_dir, "default.png")
+        try:
+            icon = Image.open(default_icon_path)
+            if icon.mode == "RGBA":
+                background = Image.new("RGB", icon.size, (0,0,0))
+                background.paste(icon, mask=icon.split()[3])
+                icon = background
+            icon = icon.resize((35,35), Image.LANCZOS).convert("RGB")
+            self.logger.info(f"Loaded default icon from '{default_icon_path}'.")
+            return icon
+        except IOError:
+            self.logger.warning("Default icon not found, using grey placeholder.")
+            return Image.new("RGB", (35, 35), "grey")
+
     def clear_screen(self):
-        """Clears OLED by showing a blank image."""
+        """Clears OLED by displaying a solid black image."""
         with self.lock:
             blank_image = Image.new("RGB", self.oled.size, "black").convert(self.oled.mode)
             self.oled.display(blank_image)
             self.logger.info("Screen cleared.")
 
-    def display_image(self, image_path, resize=True, timeout=None):
+    def shutdown_display(self):
         """
-        Displays a single image or a static frame from a GIF.
-        If you have an animated GIF, you would need extra handling.
+        1) Clear screen in software (all black).
+        2) Drive RESET pin LOW => physically hold the screen in reset (turned off).
         """
         with self.lock:
+            self.clear_screen()
+            time.sleep(0.05)  # small delay so user sees it go black
+            GPIO.output(self.reset_gpio_pin, GPIO.LOW)
+            self.logger.info(f"Display pinned to reset via GPIO {self.reset_gpio_pin} (LOW).")
+
+    def display_image(self, image_path, resize=True, timeout=None):
+        with self.lock:
             try:
-                image = Image.open(image_path)
-                # Flatten RGBA
-                if image.mode == "RGBA":
-                    bg = Image.new("RGB", image.size, (0,0,0))
-                    bg.paste(image, mask=image.split()[3])
-                    image = bg
-
+                img = Image.open(image_path)
+                if img.mode == "RGBA":
+                    bg = Image.new("RGB", img.size, (0,0,0))
+                    bg.paste(img, mask=img.split()[3])
+                    img = bg
                 if resize:
-                    image = image.resize(self.oled.size, Image.LANCZOS)
-                image = image.convert(self.oled.mode)
-
-                self.oled.display(image)
+                    img = img.resize(self.oled.size, Image.LANCZOS)
+                img = img.convert(self.oled.mode)
+                self.oled.display(img)
                 self.logger.info(f"Displayed image from '{image_path}'.")
 
-                # If a timeout is given, schedule clearing
                 if timeout:
                     t = threading.Timer(timeout, self.clear_screen)
                     t.start()
@@ -163,36 +159,16 @@ class DisplayManager:
             except IOError:
                 self.logger.error(f"Failed to load image '{image_path}'.")
 
-    def display_text(self, text, position, font_key='default', fill="white"):
-        """
-        Render text at (x,y) = position, using a font from self.fonts.
-        """
-        with self.lock:
-            image = Image.new("RGB", self.oled.size, "black")
-            draw = ImageDraw.Draw(image)
-            font = self.fonts.get(font_key, ImageFont.load_default())
-            draw.text(position, text, font=font, fill=fill)
-            # Convert & show
-            image = image.convert(self.oled.mode)
-            self.oled.display(image)
-            self.logger.info(f"Displayed text '{text}' at {position} using font='{font_key}'.")
-
     def draw_custom(self, draw_function):
-        """
-        Provide a function that takes a Pillow.Draw object.
-        """
         with self.lock:
             image = Image.new("RGB", self.oled.size, "black")
-            draw = ImageDraw.Draw(image)
-            draw_function(draw)
+            draw_obj = ImageDraw.Draw(image)
+            draw_function(draw_obj)
             image = image.convert(self.oled.mode)
             self.oled.display(image)
             self.logger.info("Custom drawing executed on OLED.")
 
     def show_logo(self):
-        """
-        If config['logo_path'] is set, display for 5s.
-        """
         logo_path = self.config.get('logo_path')
         if logo_path:
             self.display_image(logo_path, timeout=5)
@@ -200,11 +176,13 @@ class DisplayManager:
         else:
             self.logger.warning("No logo path specified in config, skipping.")
 
+
     def stop_mode(self):
         """
-        Example of a method that stops a 'mode' if you had one.
-        For now, just clears screen and sets is_active=False if used.
+        Example method that stops a 'mode' if your architecture uses it.
+        For now, just clears screen and logs.
         """
+        # If your code uses self.is_active, we can set it false:
         self.is_active = False
         self.clear_screen()
         self.logger.info("Stopped current mode and cleared display.")

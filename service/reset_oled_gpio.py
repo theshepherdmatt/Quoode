@@ -7,25 +7,23 @@ import sys
 # Use Broadcom pin numbering
 GPIO.setmode(GPIO.BCM)
 
-# Define the GPIO pin connected to OLED reset
+# The GPIO pin tied to your SSD1322/SSD display's Reset line
 OLED_GPIO_PIN = 25
 
 try:
-    # Set GPIO pin as output
+    # Configure the pin as an output
     GPIO.setup(OLED_GPIO_PIN, GPIO.OUT)
 
-    # Reset GPIO pin (turn off OLED)
+    # Drive it LOW to force the display into hardware reset (screen goes off)
     GPIO.output(OLED_GPIO_PIN, GPIO.LOW)
 
-    # Optional: Wait for a short period
-    time.sleep(1)
+    # Optionally wait a moment if you like
+    time.sleep(0.5)
 
 except Exception as e:
-    # Print the error to the console for debugging if needed
-    print(f"Error while resetting OLED GPIO: {e}")
-    sys.exit(1)  # Exit with error
+    print(f"Error while attempting to drive OLED RESET pin low: {e}", file=sys.stderr)
+    sys.exit(1)
 
-finally:
-    # Clean up GPIO settings
-    GPIO.cleanup()
-
+# Notice we do NOT call GPIO.cleanup() here.
+# This preserves the pin state as LOW even after the script exits,
+# keeping the display off until the system restarts your main Quoode app.
