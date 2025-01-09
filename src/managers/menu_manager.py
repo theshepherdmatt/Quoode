@@ -160,6 +160,16 @@ class MenuManager:
                 base_image.paste(icon, (x, y_position + y_adjustment))
 
                 # If it's the selected item, draw a label below
+                # If selected, "pop" it up by 5 pixels
+                if actual_index == self.current_selection_index:
+                    y_adjustment = -5
+                else:
+                    y_adjustment = 0
+
+                # Paste icon at (x, y_position + y_adjustment)
+                base_image.paste(icon, (x, y_position + y_adjustment))
+
+                # If it's the selected item, draw a label
                 if actual_index == self.current_selection_index:
                     label = item
                     font = self.display_manager.fonts.get(
@@ -170,9 +180,12 @@ class MenuManager:
 
                     text_width = draw_obj.textlength(label, font=font)
                     text_x = x + (icon_size - text_width) // 2
-                    text_y = y_position + icon_size + 5
+                    
+                    # Here’s where we also add y_adjustment:
+                    text_y = (y_position + icon_size + 5) + y_adjustment
 
                     draw_obj.text((text_x, text_y), label, font=font, fill=text_color)
+
 
             # Now display it
             base_image = base_image.convert(self.display_manager.oled.mode)

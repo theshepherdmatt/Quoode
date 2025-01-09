@@ -168,7 +168,7 @@ class ModeManager:
             data["display_mode"] = self.current_display_mode
 
             for key in ("clock_font_key", "show_seconds", "show_date", "screensaver_enabled",
-                        "screensaver_type", "screensaver_timeout", "display_mode",):
+                        "screensaver_type", "screensaver_timeout", "oled_brightness", "display_mode",):
                 if key in self.config:
                     data[key] = self.config[key]
 

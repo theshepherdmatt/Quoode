@@ -1,9 +1,10 @@
 {
-  "display_mode": "original",
-  "clock_font_key": "clock_digital",
+  "display_mode": "modern",
+  "clock_font_key": "clock_sans",
   "show_seconds": false,
   "show_date": false,
   "screensaver_enabled": true,
-  "screensaver_type": "quoode",
-  "screensaver_timeout": 360
+  "screensaver_type": "stars",
+  "screensaver_timeout": 60,
+  "oled_brightness": 50
 }
