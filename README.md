@@ -28,7 +28,6 @@ git checkout tags/v1.0.0
 
 * Step 2: Enter the directory for Moode and run the installation script **as root** to install all available features
 ```bash
-cd Quoode
 sudo bash install.sh
 ```
 
