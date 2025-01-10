@@ -22,6 +22,8 @@ Contained within are all necessary files and instructions to equip your Raspberr
 ```bash
 sudo apt-get install git -y
 git clone https://github.com/theshepherdmatt/Quoode.git
+cd Quoode
+git checkout tags/v1.0.0
 ```
 
 * Step 2: Enter the directory for Moode and run the installation script **as root** to install all available features
