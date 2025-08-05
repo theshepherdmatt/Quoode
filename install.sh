@@ -266,29 +266,30 @@ install_system_dependencies() {
 # ============================================
 #    Upgrade pip, setuptools, wheel
 # ============================================
-upgrade_pip_system_wide() {
-    log_progress "Upgrading pip, setuptools, and wheel system-wide..."
-    run_command "python3 -m pip install --upgrade pip setuptools wheel --break-system-packages"
-    log_message "success" "pip, setuptools, and wheel upgraded successfully."
+
+setup_python_venv_and_deps() {
+    log_progress "Setting up Python venv and installing dependencies..."
+
+    VENV_DIR="/home/$INSTALL_USER/Quoode/.venv"
+    REQUIREMENTS_FILE="/home/$INSTALL_USER/Quoode/requirements.txt"
+
+    # Install venv if not present
+    run_command "apt-get install -y python3-venv python3-pip"
+
+    # Create venv if missing
+    if [ ! -d \"$VENV_DIR\" ]; then
+        run_command "python3 -m venv $VENV_DIR"
+    fi
+
+    # Activate venv and install/upgrade pip/tools/deps
+    source "$VENV_DIR/bin/activate"
+    pip install --upgrade pip setuptools wheel
+    pip install --upgrade --force-reinstall -r "$REQUIREMENTS_FILE"
+    deactivate
+
+    log_message "success" "Python venv and dependencies are set up in $VENV_DIR."
 }
 
-# ============================================
-#  Install Python Dependencies System-Wide
-# ============================================
-install_python_dependencies() {
-    log_progress "Installing Python dependencies system-wide..."
-
-    run_command "python3 -m pip install --upgrade \
-        --ignore-installed \
-        --no-cache-dir \
-        --break-system-packages \
-        --verbose -r /home/$INSTALL_USER/Quoode/requirements.txt > /home/$INSTALL_USER/install_requirements.log 2>&1"
-
-    # Now upgrade websocket-client for CamillaDSP compatibility:
-    #run_command "python3 -m pip install --upgrade websocket-client"
-
-    log_message "success" "Python dependencies installed successfully system-wide."
-}
 
 # ============================================
 #           Configure Samba
@@ -358,8 +359,7 @@ main() {
     fi
 
     install_system_dependencies
-    upgrade_pip_system_wide
-    install_python_dependencies
+    setup_python_venv_and_deps
 
     # Quoode Main Service
     log_progress "Setting up the Main Quoode Service..."

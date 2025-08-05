@@ -240,8 +240,8 @@ def main():
     screensaver_menu = manager_factory.screensaver_menu
 
     # 17. Optional ButtonsLEDController
-    buttons_leds = ButtonsLEDController(config_path=config_path)
-    buttons_leds.start()
+    #buttons_leds = ButtonsLEDController(config_path=config_path)
+    #buttons_leds.start()
 
     last_interaction_time = time.time()
 

@@ -1,15 +1,15 @@
 [Unit]
 Description=Main Quoode Service
 After=network.target
+
 [Service]
 Type=simple
 User=__INSTALL_USER__
 WorkingDirectory=/home/__INSTALL_USER__/Quoode
-ExecStart=/usr/bin/python3 /home/__INSTALL_USER__/Quoode/src/main.py
-ExecStop=/usr/bin/python3 /home/__INSTALL_USER__/Quoode/service/reset_oled_gpio.py
+ExecStart=/home/__INSTALL_USER__/Quoode/.venv/bin/python3 /home/__INSTALL_USER__/Quoode/src/main.py
+ExecStop=/home/__INSTALL_USER__/Quoode/.venv/bin/python3 /home/__INSTALL_USER__/Quoode/service/reset_oled_gpio.py
 Restart=on-failure
 Environment="PYTHONUNBUFFERED=1"
 
 [Install]
 WantedBy=multi-user.target
-
